@@ -20,7 +20,7 @@ The current implementation supports:
 
 ## Project Structure
 
-<pre> ``` selection_problem/
+<pre> selection_problem/
 ├── minmax/ # Min-Max experiments
 │ ├── main.py
 │ ├── exact_solution.py
@@ -37,7 +37,7 @@ The current implementation supports:
 ├── run_all.py # Runs all experiments and generates plots
 ├── results/ # Stores result files
 ├── requirements.txt
-└── README.md ``` </pre>
+└── README.md </pre>
 
 ---
 
