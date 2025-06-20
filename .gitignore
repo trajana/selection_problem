@@ -2,16 +2,14 @@
 __pycache__/
 *.py[cod]
 *.pkl
+*.png
 
 # Virtual environment
 .venv/
 
-# Results
+# Output files
 results/
 
-# IDE files
+# IDE config
 .idea/
 .vscode/
-
-# Plots
-*.png
