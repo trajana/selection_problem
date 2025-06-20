@@ -20,7 +20,7 @@ The current implementation supports:
 
 ## Project Structure
 
-selection_problem/
+<pre> ``` selection_problem/
 ├── minmax/ # Min-Max experiments
 │ ├── main.py
 │ ├── exact_solution.py
@@ -37,7 +37,7 @@ selection_problem/
 ├── run_all.py # Runs all experiments and generates plots
 ├── results/ # Stores result files
 ├── requirements.txt
-└── README.md
+└── README.md ``` </pre>
 
 ---
 
@@ -71,7 +71,8 @@ If you run the main scripts directly (without run_all.py), you can generate the 
 python minmax/plot.py
 python maxmin/plot.py
 
-Note: Plots are only generated if you enabled RUN_LOOP = True (batch evaluation).
+Note: To generate plots, make sure to first run the corresponding main.py script with RUN_LOOP = True, which creates the 
+necessary .pkl result file.
 
 # Dependencies
 
