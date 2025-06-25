@@ -1,32 +1,40 @@
 # main.py
 
-# Main script to run the robust selection problem with the min-max criterion.
+# Main script to run the robust selection problem with the min-max or max-min criterion.
 
 # Calls functions from other modules to compute the exact and heuristic solutions.
 # Adjustable parameters: n (total items), p (items to select), N (scenarios), c_range (random cost range), EXPORT_CSV,
-# num_runs (number of runs in loop), n_values (for multiple n values).
+# num_runs (number of runs in loop), n_values (for multiple n values), PLOT.
 # Choose between fixed or random cost vectors. If using fixed costs, define them in utils.py (get_fixed_costs).
 # TODO: Notation mit Arbeit abgleichen / überprüfen
 
 import pickle
-from minmax.exact_solution import solve_exact_robust_selection  # import functions
-from minmax.primal_rounding import solve_primal_rounding  # import functions
+import os
+from datetime import datetime
+from exact_solution import solve_exact_robust_selection  # import functions
+from primal_rounding import solve_primal_rounding  # import functions
 from utils import (get_fixed_costs, get_random_costs, print_costs, cost_matrix_to_dict, export_results_to_csv,
                    print_all_results_from_pkl)
 
+# Base data TODO: Adjust as needed
+CRITERION = "minmax"  # Choose minmax or maxmin
+N = 4  # Number of scenarios (discrete uncertainty sets)
+c_range = 100  # Range for random costs
+num_runs = 10  # Number of runs for the loop
+USE_FIXED_COSTS = False  # True = use fixed costs from utils.py (align n and N with the fixed cost matrix, False =
+# use random costs
+n_values = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]  # List of n-values (no. of items) to evaluate
+EXPORT_CSV = True  # Set True to enable CSV export
+PLOT = True  # Set True to enable plotting
+
+# Create unique results subfolder based on criterion, N, and timestamp
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+RESULT_DIR = f"results/{CRITERION}_N{N}_{timestamp}"
+os.makedirs(RESULT_DIR, exist_ok=True)
+
 if __name__ == "__main__":
-
-    # Base data TODO: Adjust as needed
-    N = 10  # Number of scenarios (discrete uncertainty sets)
-    c_range = 100  # Range for random costs
-    EXPORT_CSV = True  # Set True to enable CSV export
-    num_runs = 20  # Number of runs for the loop
-    USE_FIXED_COSTS = False  # True = use fixed costs from utils.py (align n and N with the fixed cost matrix, False =
-    # use random costs
-    n_values = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]  # List of n-values (no. of items) to evaluate
-
-    # Loop over n-values and repeat each experiment num_runs times
     all_results = []
+
     for n in n_values:
         p = n // 2
         print(f"\n=== Running experiments for n = {n}, p = {p} ===")
@@ -53,7 +61,7 @@ if __name__ == "__main__":
             flat_costs = [costs[(s + 1, i + 1)] for s in range(N) for i in range(n)]
 
             print("\n--- Exact robust solution ---")
-            obj_val_exact, x_val_exact = solve_exact_robust_selection(costs, n, p, N)
+            obj_val_exact, x_val_exact = solve_exact_robust_selection(costs, n, p, N, criterion=CRITERION)
             # print("\n--- Debug 1 ---")  # TODO: Überprüft - rausnehmen
             # print(obj_val_exact, x_val_exact)   # TODO: Überprüft - rausnehmen
             selected_exact = [i for i, val in x_val_exact.items() if val > 0.5]  # Rundungsabweichung bei binären Variablen abfangen
@@ -66,7 +74,7 @@ if __name__ == "__main__":
             print(f"Objective value: {obj_val_exact:.2f}")
 
             print("\n--- Primal Rounding ---")
-            obj_val_primal, x_val_primal_frac, x_val_primal_rounded = solve_primal_rounding(costs, n, p, N)
+            obj_val_primal, x_val_primal_frac, x_val_primal_rounded = solve_primal_rounding(costs, n, p, N, criterion=CRITERION)
             # print("\n--- Debug 1 ---")  # TODO: Überprüft  - rausnehmen
             # print(x_val_primal_frac, x_val_primal_rounded)  # TODO: Überprüft  - rausnehmen
             # print("\n--- Debug 2 ---") # TODO: Überprüft  - rausnehmen
@@ -108,13 +116,19 @@ if __name__ == "__main__":
 
         # Optional: Also export as CSV
         if EXPORT_CSV:
-            export_results_to_csv(all_results, n, p, N, export_filename_prefix="results_minmax")
+            export_results_to_csv(all_results, n, p, N, export_filename_prefix=f"{RESULT_DIR}/results_{CRITERION}")
 
     # Save results as pickle file
-    with open("results/all_results_minmax.pkl", "wb") as f:
+    with open(f"{RESULT_DIR}/all_results_{CRITERION}.pkl", "wb") as f:
         pickle.dump(all_results, f)
-    print("\n✅ All results saved to all_results_minmax.pkl")
+    print(f"\n✅ All results saved to all_results_{CRITERION}.pkl")
 
     # View all results from a .pkl file like a CSV TODO: Löschen, wenn nicht mehr benötigt (auch in utils.py &
     # from utils import)
-    print_all_results_from_pkl("results/all_results_minmax.pkl")
+    print_all_results_from_pkl(f"{RESULT_DIR}/all_results_{CRITERION}.pkl")
+
+    # Optional: Plot results
+    if PLOT:
+        from plot import plot_approximation_ratios
+
+        plot_approximation_ratios(CRITERION, output_dir=RESULT_DIR)

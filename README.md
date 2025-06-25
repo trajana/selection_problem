@@ -5,8 +5,12 @@
 This repository provides a modular Python implementation for solving the **Robust Selection Problem** under discrete 
 uncertainty using a variety of **approximation algorithms**.
 
+## Problem Description
+
 SELECTION PROBLEM: The goal is to select exactly `p` items out of `n`, such that performance is robust across multiple 
 cost scenarios.
+
+## Features
 
 The current implementation supports:
 
@@ -16,63 +20,47 @@ The current implementation supports:
   - **Min-Max**
   - **Max-Min**
 
----
-
 ## Project Structure
 
 <pre>selection_problem/
-├── minmax/ # Min-Max experiments
-│ ├── main.py
-│ ├── exact_solution.py
-│ ├── primal_rounding.py
-│ ├── plot.py
-│ └── init.py
-├── maxmin/ # Max-Min experiments
-│ ├── main.py
-│ ├── exact_solution.py
-│ ├── primal_rounding.py
-│ ├── plot.py
-│ └── init.py
+├── main.py
+├── exact_solution.py
+├── primal_rounding.py
+├── plot.py
 ├── utils.py
-├── run_all.py # Runs all experiments and generates plots
 ├── results/ # Stores result files
 ├── requirements.txt
 └── README.md</pre>
 
----
-
 ## Running the Code
 
-To run all experiments (both Min-Max and Max-Min variants) and generate result files and plots:
+To run experiments for either the Min-Max or Max-Min criterion, open main.py and set the criterion at the top:
 
-python run_all.py
+CRITERION = "minmax"  # or "maxmin"
 
-This script will:
- - Execute both minmax/main.py and maxmin/main.py 
- - Generate .pkl and .csv result files 
- - Optionally generate plots (if PLOT_RESULTS = True in run_all.py)
+Then, execute the script:
 
-You can change the following settings in the respective main.py files:
- - n, p: number of items and selection size 
- - N: number of cost scenarios 
- - c_range: range of random costs 
- - EXPORT_CSV: whether to save results as CSV 
- - RUN_LOOP: whether to run multiple repetitions 
- - num_runs: number of repetitions (if RUN_LOOP = True)
- - n_values: list of n-values to test
+python main.py
 
-You can switch between fixed and random cost matrices in both main.py files: Activate get_fixed_costs() or 
-c = get_random_costs(n, N, c_range)
-To define your own fixed cost matrix, modify the get_fixed_costs() function in utils.py. The  matrix should be of size 
-n x N.
+This will:
+- Run the experiment loop for the selected criterion
+  - Generate result files:
+  .pkl (for plots)
+  .csv (if EXPORT_CSV = True)
+- Automatically create a plot (if PLOT = True)
 
-If you run the main scripts directly (without run_all.py), you can generate the corresponding plots separately:
-
-python minmax/plot.py
-python maxmin/plot.py
-
-Note: To generate plots, make sure to first run the corresponding main.py script with RUN_LOOP = True, which creates the 
-necessary .pkl result file.
+You can change the following settings (in main.py):
+- CRITERION: "minmax" or "maxmin"
+- n_values: list of item counts (n) to evaluate
+- p = n // 2: number of items to select (calculated automatically)
+- N: number of cost scenarios
+- c_range: range of random costs (if not using fixed costs)
+- USE_FIXED_COSTS: set to True to use predefined costs from utils.py
+  - To define your own fixed cost matrix, modify the get_fixed_costs() function in utils.py. 
+    The  matrix should be of size n x N.
+- num_runs: how many repetitions to run for each setting
+- EXPORT_CSV: whether to save .csv result files
+- PLOT: whether to generate a plot at the end
 
 # Dependencies
 

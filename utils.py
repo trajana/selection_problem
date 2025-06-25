@@ -48,7 +48,7 @@ def export_results_to_csv(results, n, p, N, export_filename_prefix="results"):
         "x_vector_exact", "x_vector_primal_frac", "x_vector_primal_rounded"
     ] + cost_headers
 
-    filename = f"results/{export_filename_prefix}_n_{n}_p_{p}_N_{N}.csv"
+    filename = f"{export_filename_prefix}_n_{n}_p_{p}_N_{N}.csv"
     with open(filename, mode="w", newline="") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=csv_header)
         writer.writeheader()

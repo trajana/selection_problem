@@ -6,17 +6,21 @@
 # for different values of n (number of items), and plots the ratio with error bars (standard deviation).
 # The plot helps evaluate how the performance of the approximation algorithms scales with problem size.
 
-# Prerequisite: Run main.py first to generate 'all_results.pkl'.
-
-# TODO: Aktuell wird Plot 2x geöffnet (evtl. Bug in matplotlib?)
-
 import pickle
 import matplotlib
 matplotlib.use('TkAgg')  # Use TkAgg backend for matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plot_approximation_ratios(pkl_file="results/all_results_maxmin.pkl"):
+def plot_approximation_ratios(criterion, output_dir="results"):
+    pkl_file = f"{output_dir}/all_results_{criterion}.pkl"
+    output_plot = f"{output_dir}/plot_ratio_{criterion}.png"
+
+    import os
+    if not os.path.exists(pkl_file):
+        print(f"⚠️ Datei {pkl_file} nicht gefunden.")
+        return
+
     # Load results
     with open(pkl_file, "rb") as f:
         all_results = pickle.load(f)
@@ -42,11 +46,11 @@ def plot_approximation_ratios(pkl_file="results/all_results_maxmin.pkl"):
     plt.errorbar(n_values, avg_ratios, yerr=ci_95, fmt='-o', capsize=5)
     plt.xlabel("Number of items (n)")
     plt.ylabel("Approximation ratio (ALG / OPT)")
-    plt.title("Approximation Ratio (Max-Min): Primal Rounding vs. Optimal Solution")
+    titles = {"minmax": "Min-Max", "maxmin": "Max-Min"}
+    plt.title(f"Approximation Ratio ({titles.get(criterion, criterion)}): Primal Rounding vs. Optimal Solution")
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("results/plot_ratio_maxmin.png")
+    plt.savefig(output_plot)
     # plt.show()  # if activated: close plot window to continue execution of run_all.py
 
-if __name__ == "__main__":
-    plot_approximation_ratios()
+    print(f"✅ Plot saved to {output_plot}")
