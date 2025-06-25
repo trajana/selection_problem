@@ -33,11 +33,13 @@ def plot_approximation_ratios(pkl_file="results/all_results_minmax.pkl"):
     # Prepare data for plotting
     n_values = sorted(n_to_ratios.keys())
     avg_ratios = [np.mean(n_to_ratios[n]) for n in n_values]
-    std_devs = [np.std(n_to_ratios[n]) for n in n_values]
+    #std_devs = [np.std(n_to_ratios[n]) for n in n_values]
+    ci_95 = [1.96 * np.std(n_to_ratios[n]) / np.sqrt(len(n_to_ratios[n])) for n in n_values]
 
     # Plot
     plt.figure(figsize=(10, 6))
-    plt.errorbar(n_values, avg_ratios, yerr=std_devs, fmt='-o', capsize=5)
+    #plt.errorbar(n_values, avg_ratios, yerr=std_devs, fmt='-o', capsize=5)
+    plt.errorbar(n_values, avg_ratios, yerr=ci_95, fmt='-o', capsize=5)
     plt.xlabel("Number of items (n)")
     plt.ylabel("Approximation ratio (ALG / OPT)")
     plt.title("Approximation Ratio (Min-Max): Primal Rounding vs. Optimal Solution")

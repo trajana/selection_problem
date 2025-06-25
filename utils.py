@@ -10,11 +10,18 @@ import csv
 import pickle  # TODO: Remove nach debugging
 
 # Fixed costs
-def get_fixed_costs():
-    return [
+def get_fixed_costs(n=None, N=None):
+    fixed_costs = [
         [1, 200, 30, 40, 50],  # Scenario  TODO: Adjust as needed
-        [5, 25, 35, 45, 55],   # Scenario 2
+        [5, 25, 35, 45, 55]   # Scenario 2
     ]
+
+    if N is not None and N != len(fixed_costs):
+        raise ValueError(f"N = {N}, but fixed costs have {len(fixed_costs)} rows")
+    if n is not None and n != len(fixed_costs[0]):
+        raise ValueError(f"n = {n}, but fixed costs have {len(fixed_costs[0])} columns")
+
+    return fixed_costs
 
 # Random costs
 def get_random_costs(n, N, c_range=100):

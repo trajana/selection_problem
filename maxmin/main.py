@@ -17,11 +17,11 @@ from utils import (get_fixed_costs, get_random_costs, print_costs, cost_matrix_t
 if __name__ == "__main__":
 
     # Base data TODO: Adjust as needed
-    N = 2  # Number of scenarios (discrete uncertainty sets)
+    N = 10  # Number of scenarios (discrete uncertainty sets)
     c_range = 100  # Range for random costs
     EXPORT_CSV = True  # Set True to enable CSV export
     RUN_LOOP = True  # Set True to enable repetitions
-    num_runs = 100  # Number of runs for the loop (if RUN_LOOP is True)
+    num_runs = 200  # Number of runs for the loop (if RUN_LOOP is True)
 
     if RUN_LOOP:
         n_values = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]  # List of n-values (no. of items) to
