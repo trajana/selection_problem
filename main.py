@@ -17,7 +17,7 @@ from utils import (get_fixed_costs, get_random_costs, print_costs, cost_matrix_t
                    print_all_results_from_pkl)
 
 # Base data TODO: Adjust as needed
-CRITERION = "minmax"  # Choose minmax or maxmin
+CRITERION = "maxmin"  # Choose minmax or maxmin
 N = 4  # Number of scenarios (discrete uncertainty sets)
 c_range = 100  # Range for random costs
 num_runs = 10  # Number of runs for the loop
@@ -74,7 +74,8 @@ if __name__ == "__main__":
             print(f"Objective value: {obj_val_exact:.2f}")
 
             print("\n--- Primal Rounding ---")
-            obj_val_primal, x_val_primal_frac, x_val_primal_rounded = solve_primal_rounding(costs, n, p, N, criterion=CRITERION)
+            obj_val_primal, x_val_primal_frac, x_val_primal_rounded, obj_val_primal_lp = (
+                solve_primal_rounding(costs, n, p, N, criterion=CRITERION))
             # print("\n--- Debug 1 ---")  # TODO: Überprüft  - rausnehmen
             # print(x_val_primal_frac, x_val_primal_rounded)  # TODO: Überprüft  - rausnehmen
             # print("\n--- Debug 2 ---") # TODO: Überprüft  - rausnehmen
@@ -89,6 +90,11 @@ if __name__ == "__main__":
 
             # Ratio of primal to exact objective value
             ratio_primal_opt = obj_val_primal / obj_val_exact if obj_val_exact != 0 else 0
+            integrality_gap_primal = obj_val_primal_lp / obj_val_exact if obj_val_exact != 0 else 0
+            rounding_gap_primal = obj_val_primal / obj_val_primal_lp if obj_val_primal_lp != 0 else 0
+            print(f"Approximation ratio: {ratio_primal_opt:.2f}")
+            print(f"Integrality gap (LP / OPT): {integrality_gap_primal:.2f}")
+            print(f"Rounding gap (rounded / LP): {rounding_gap_primal:.2f}")
 
             print("\n--- Summary ---")
             print("\nExact robust solution:")
@@ -106,8 +112,11 @@ if __name__ == "__main__":
                 "p": p,
                 "run": run + 1,
                 "obj_exact": obj_val_exact,
+                "obj_primal_lp": obj_val_primal_lp,
                 "obj_primal": obj_val_primal,
                 "ratio_primal_opt": ratio_primal_opt,
+                "integrality_gap": integrality_gap_primal,
+                "rounding_gap": rounding_gap_primal,
                 "x_vector_exact": x_vector_exact,
                 "x_vector_primal_frac": x_vector_primal_frac,
                 "x_vector_primal_rounded": x_vector_primal_rounded,
@@ -129,6 +138,6 @@ if __name__ == "__main__":
 
     # Optional: Plot results
     if PLOT:
-        from plot import plot_approximation_ratios
-
-        plot_approximation_ratios(CRITERION, output_dir=RESULT_DIR)
+        from plot import plot_approximation_ratios_primal, plot_gaps_primal
+        plot_approximation_ratios_primal(CRITERION, num_runs, N, output_dir=RESULT_DIR)
+        plot_gaps_primal(CRITERION, num_runs, N, output_dir=RESULT_DIR)

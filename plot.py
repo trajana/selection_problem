@@ -11,14 +11,14 @@ import matplotlib
 matplotlib.use('TkAgg')  # Use TkAgg backend for matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
-def plot_approximation_ratios(criterion, output_dir="results"):
+def plot_approximation_ratios_primal(criterion, num_runs, N, output_dir="results"):
     pkl_file = f"{output_dir}/all_results_{criterion}.pkl"
     output_plot = f"{output_dir}/plot_ratio_{criterion}.png"
 
-    import os
     if not os.path.exists(pkl_file):
-        print(f"⚠️ Datei {pkl_file} nicht gefunden.")
+        print(f"⚠️ File {pkl_file} not found.")
         return
 
     # Load results
@@ -42,15 +42,67 @@ def plot_approximation_ratios(criterion, output_dir="results"):
 
     # Plot
     plt.figure(figsize=(10, 6))
-    #plt.errorbar(n_values, avg_ratios, yerr=std_devs, fmt='-o', capsize=5)
-    plt.errorbar(n_values, avg_ratios, yerr=ci_95, fmt='-o', capsize=5)
+    plt.errorbar(n_values, avg_ratios, yerr=ci_95, fmt='-o', capsize=5, label="Primal Rounding (Ø ± 95% CI)")
     plt.xlabel("Number of items (n)")
     plt.ylabel("Approximation ratio (ALG / OPT)")
     titles = {"minmax": "Min-Max", "maxmin": "Max-Min"}
-    plt.title(f"Approximation Ratio ({titles.get(criterion, criterion)}): Primal Rounding vs. Optimal Solution")
-    plt.grid(True)
+    plt.title(f"Approximation Ratio ({titles[criterion]}): Primal Rounding vs. Optimal\n"
+              f"(Average over {num_runs} runs, {N} scenarios)")
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.xticks(n_values)
+    # if criterion == "minmax":
+    #     plt.ylim(1.0, 1.2)
+    # elif criterion == "maxmin":
+    #     plt.ylim(0.8, 1.0)
+    plt.legend()
     plt.tight_layout()
     plt.savefig(output_plot)
     # plt.show()  # if activated: close plot window to continue execution of run_all.py
 
     print(f"✅ Plot saved to {output_plot}")
+
+def plot_gaps_primal(criterion, num_runs, N, output_dir="results"):
+    pkl_file = os.path.join(output_dir, f"all_results_{criterion}.pkl")
+    output_plot = os.path.join(output_dir, f"plot_gaps_{criterion}.png")
+
+    if not os.path.exists(pkl_file):
+        print(f"⚠️ File {pkl_file} not found.")
+        return
+
+    # Load results
+    with open(pkl_file, "rb") as f:
+        all_results = pickle.load(f)
+
+    # Organize data by n
+    n_to_integrality_gaps = {}
+    n_to_rounding_gaps = {}
+
+    for entry in all_results:
+        n = entry["n"]
+        n_to_integrality_gaps.setdefault(n, []).append(entry["integrality_gap"])
+        n_to_rounding_gaps.setdefault(n, []).append(entry["rounding_gap"])
+
+    # Prepare data for plotting
+    n_values = sorted(n_to_integrality_gaps.keys())
+    avg_integrality = [np.mean(n_to_integrality_gaps[n]) for n in n_values]
+    ci_integrality = [1.96 * np.std(n_to_integrality_gaps[n]) / np.sqrt(len(n_to_integrality_gaps[n])) for n in
+                      n_values]
+
+    avg_rounding = [np.mean(n_to_rounding_gaps[n]) for n in n_values]
+    ci_rounding = [1.96 * np.std(n_to_rounding_gaps[n]) / np.sqrt(len(n_to_rounding_gaps[n])) for n in n_values]
+
+    # Plot
+    plt.figure(figsize=(10, 6))
+    plt.errorbar(n_values, avg_integrality, yerr=ci_integrality, fmt='-o', capsize=5, label="Integrality Gap")
+    plt.errorbar(n_values, avg_rounding, yerr=ci_rounding, fmt='-s', capsize=5, label="Rounding Gap")
+    plt.xlabel("Number of items (n)")
+    plt.ylabel("Gap in objective value")
+    titles = {"minmax": "Min-Max", "maxmin": "Max-Min"}
+    plt.title(f"Gaps: LP vs. Integer ({titles[criterion]})\n(Average over {num_runs} runs, {N} scenarios)")
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.legend()
+    plt.xticks(n_values)
+    plt.tight_layout()
+    plt.savefig(output_plot)
+
+    print(f"✅ Gap plot saved to {output_plot}")

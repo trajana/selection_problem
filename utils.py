@@ -44,8 +44,8 @@ def cost_matrix_to_dict(c):
 def export_results_to_csv(results, n, p, N, export_filename_prefix="results"):
     cost_headers = [f"Costs_Scenario{s + 1}_Item{i + 1}" for s in range(N) for i in range(n)]
     csv_header = [
-        "n", "p", "run", "obj_exact", "obj_primal", "ratio_primal_opt",
-        "x_vector_exact", "x_vector_primal_frac", "x_vector_primal_rounded"
+        "n", "p", "run", "obj_exact", "obj_primal_lp", "obj_primal", "ratio_primal_opt", "integrality_gap",
+        "rounding_gap", "x_vector_exact", "x_vector_primal_frac", "x_vector_primal_rounded"
     ] + cost_headers
 
     filename = f"{export_filename_prefix}_n_{n}_p_{p}_N_{N}.csv"
@@ -61,7 +61,10 @@ def export_results_to_csv(results, n, p, N, export_filename_prefix="results"):
                 "run": result["run"],
                 "obj_exact": result["obj_exact"],
                 "obj_primal": result["obj_primal"],
+                "obj_primal_lp": result.get("obj_primal_lp", ""),
                 "ratio_primal_opt": result["ratio_primal_opt"],
+                "integrality_gap": result.get("integrality_gap", ""),
+                "rounding_gap": result.get("rounding_gap", ""),
                 "x_vector_exact": str(result["x_vector_exact"]),
                 "x_vector_primal_frac": str(result["x_vector_primal_frac"]),
                 "x_vector_primal_rounded": str(result["x_vector_primal_rounded"]),
@@ -79,8 +82,8 @@ def print_all_results_from_pkl(pkl_filename="all_results.pkl"):
     all_results.sort(key=lambda x: (x["n"], x["run"]))
 
     header = [
-        "n", "p", "run", "obj_exact", "obj_primal", "ratio_primal_opt",
-        "x_vector_exact", "x_vector_primal_frac", "x_vector_primal_rounded"
+        "n", "p", "run", "obj_exact", "obj_primal", "obj_primal_lp", "ratio_primal_opt", "integrality_gap",
+        "rounding_gap", "x_vector_exact", "x_vector_primal_frac", "x_vector_primal_rounded"
     ]
     print("; ".join(header))
 
@@ -90,8 +93,11 @@ def print_all_results_from_pkl(pkl_filename="all_results.pkl"):
             str(entry["p"]),
             str(entry["run"]),
             f"{entry['obj_exact']:.2f}",
+            f"{entry.get('obj_primal_lp', 0):.2f}",
             f"{entry['obj_primal']:.2f}",
             f"{entry['ratio_primal_opt']:.4f}",
+            f"{entry.get('integrality_gap', 0):.4f}",
+            f"{entry.get('rounding_gap', 0):.4f}",
             str(entry["x_vector_exact"]),
             str(entry["x_vector_primal_frac"]),
             str(entry["x_vector_primal_rounded"])

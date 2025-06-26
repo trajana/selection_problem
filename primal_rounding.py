@@ -42,6 +42,7 @@ def solve_primal_rounding(costs, n, p, N, criterion):  # function
 
         # Optimize model
         m.optimize()
+        obj_val_primal_lp = m.ObjVal
 
         # Relaxed x-values
         x_val_primal_frac = {i: x[i].X for i in range(1, n + 1)}
@@ -78,7 +79,7 @@ def solve_primal_rounding(costs, n, p, N, criterion):  # function
         print(f"\nMax scenario cost (should match obj_val_primal): {max(scenario_costs)}")
         print(f"Returned objective value (obj_val_primal): {obj_val_primal}")  # TODO: End of debug prints
 
-        return obj_val_primal, x_val_primal_frac, x_val_primal_rounded
+        return obj_val_primal, x_val_primal_frac, x_val_primal_rounded, obj_val_primal_lp
 
     # Error handling
     except gp.GurobiError as e:
