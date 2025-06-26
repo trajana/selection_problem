@@ -54,7 +54,7 @@ def solve_exact_robust_selection(costs, n, p, N, criterion):  # function
         # TODO: End of debug prints
 
         # Print results
-        x_val_exact = {i: x[i].X for i in range(1, n + 1)}
+        x_val_exact = [x[i].X for i in range(1, n + 1)]
         obj_val_exact = m.ObjVal # Wert von z
         return obj_val_exact, x_val_exact
 

@@ -64,24 +64,20 @@ if __name__ == "__main__":
             obj_val_exact, x_val_exact = solve_exact_robust_selection(costs, n, p, N, criterion=CRITERION)
             # print("\n--- Debug 1 ---")  # TODO: Überprüft - rausnehmen
             # print(obj_val_exact, x_val_exact)   # TODO: Überprüft - rausnehmen
-            selected_exact = [i for i, val in x_val_exact.items() if val > 0.5]  # Rundungsabweichung bei binären Variablen abfangen
-            # print("\n--- Debug 2 ---")  # TODO: Überprüft - rausnehmen
-            # print(len(selected_exact))  # TODO: Überprüft  (sollte == p sein)  - rausnehmen
-            x_vector_exact = [1 if i in selected_exact else 0 for i in range(1, n + 1)]
+            x_vector_exact = [1 if val > 0.5 else 0 for val in x_val_exact]  # Rundungsabweichung bei binären Variablen abfangen
             # print("\n--- Debug 3 ---")  # TODO: Überprüft  - rausnehmen
             # print(x_val_exact, x_vector_exact)  # TODO: Überprüft  - rausnehmen
             print(f"Selected items (exact): {x_vector_exact}")
             print(f"Objective value: {obj_val_exact:.2f}")
 
             print("\n--- Primal Rounding ---")
-            obj_val_primal, x_val_primal_frac, x_val_primal_rounded, obj_val_primal_lp = (
+            obj_val_primal, x_val_primal_frac, x_vector_primal_rounded, obj_val_primal_lp = (
                 solve_primal_rounding(costs, n, p, N, criterion=CRITERION))
             # print("\n--- Debug 1 ---")  # TODO: Überprüft  - rausnehmen
             # print(x_val_primal_frac, x_val_primal_rounded)  # TODO: Überprüft  - rausnehmen
             # print("\n--- Debug 2 ---") # TODO: Überprüft  - rausnehmen
             # print(f"Number of selected items: {sum(x_val_primal_rounded.values())} (should be {p})")  # TODO: Überprüft  - rausnehmen (sollte == p sein)
-            x_vector_primal_frac = [round(x_val_primal_frac[i], 2) for i in range(1, n + 1)]
-            x_vector_primal_rounded = [x_val_primal_rounded[i] for i in range(1, n + 1)]
+            x_vector_primal_frac = [round(val, 2) for val in x_val_primal_frac]
             # print("\n--- Debug 3 ---")  # TODO: Überprüft  - rausnehmen
             # print(x_val_primal_rounded, x_vector_primal_rounded)  # TODO: Überprüft  - rausnehmen
             print(f"Fractional values: {x_vector_primal_frac}")
