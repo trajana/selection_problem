@@ -58,7 +58,6 @@ def plot_approximation_ratios_primal(criterion, num_runs, N, output_dir="results
     plt.tight_layout()
     plt.savefig(output_plot)
     # plt.show()  # if activated: close plot window to continue execution of run_all.py
-
     print(f"✅ Plot saved to {output_plot}")
 
 def plot_gaps_primal(criterion, num_runs, N, output_dir="results"):
@@ -104,5 +103,24 @@ def plot_gaps_primal(criterion, num_runs, N, output_dir="results"):
     plt.xticks(n_values)
     plt.tight_layout()
     plt.savefig(output_plot)
-
     print(f"✅ Gap plot saved to {output_plot}")
+
+def plot_histogram_of_xvals(n_to_xvals, output_dir="results", n_to_max_frac_count=None):
+    for n, xvals in n_to_xvals.items():
+        plt.figure(figsize=(8, 5))
+        plt.hist(xvals, bins=20, edgecolor='black')
+
+        if n_to_max_frac_count and n in n_to_max_frac_count:
+            max_count = n_to_max_frac_count[n]
+            title = f"LP x[i] values for n = {n}\nMax. # fractional x[i]: {max_count}"
+        else:
+            title = f"LP x[i] values for n = {n}"
+
+        plt.title(title)
+        plt.xlabel("x[i] value")
+        plt.ylabel("Frequency")
+        plt.tight_layout()
+        output_file = os.path.join(output_dir, f"histogram_xvals_n_{n}.png")
+        plt.savefig(output_file)
+        plt.close()
+        print(f"✅ Histogram for n = {n} saved to {output_file}")

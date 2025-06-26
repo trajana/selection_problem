@@ -45,7 +45,8 @@ def export_results_to_csv(results, n, p, N, export_filename_prefix="results"):
     cost_headers = [f"Costs_Scenario{s + 1}_Item{i + 1}" for s in range(N) for i in range(n)]
     csv_header = [
         "n", "p", "run", "obj_exact", "obj_primal_lp", "obj_primal", "ratio_primal_opt", "integrality_gap",
-        "rounding_gap", "x_vector_exact", "x_vector_primal_frac", "x_vector_primal_rounded"
+        "rounding_gap", "fractional_count", "fractional_ratio", "x_vector_exact", "x_vector_primal_frac",
+        "x_vector_primal_rounded"
     ] + cost_headers
 
     filename = f"{export_filename_prefix}_n_{n}_p_{p}_N_{N}.csv"
@@ -65,6 +66,8 @@ def export_results_to_csv(results, n, p, N, export_filename_prefix="results"):
                 "ratio_primal_opt": result["ratio_primal_opt"],
                 "integrality_gap": result.get("integrality_gap", ""),
                 "rounding_gap": result.get("rounding_gap", ""),
+                "fractional_count": result.get("fractional_count", ""),
+                "fractional_ratio": result.get("fractional_ratio", ""),
                 "x_vector_exact": str(result["x_vector_exact"]),
                 "x_vector_primal_frac": str(result["x_vector_primal_frac"]),
                 "x_vector_primal_rounded": str(result["x_vector_primal_rounded"]),
@@ -83,7 +86,8 @@ def print_all_results_from_pkl(pkl_filename="all_results.pkl"):
 
     header = [
         "n", "p", "run", "obj_exact", "obj_primal", "obj_primal_lp", "ratio_primal_opt", "integrality_gap",
-        "rounding_gap", "x_vector_exact", "x_vector_primal_frac", "x_vector_primal_rounded"
+        "rounding_gap", "fractional_count", "fractional_ratio", "x_vector_exact", "x_vector_primal_frac",
+        "x_vector_primal_rounded"
     ]
     print("; ".join(header))
 
@@ -98,6 +102,8 @@ def print_all_results_from_pkl(pkl_filename="all_results.pkl"):
             f"{entry['ratio_primal_opt']:.4f}",
             f"{entry.get('integrality_gap', 0):.4f}",
             f"{entry.get('rounding_gap', 0):.4f}",
+            str(entry.get("fractional_count", 0)),
+            f"{entry.get('fractional_ratio', 0):.4f}",
             str(entry["x_vector_exact"]),
             str(entry["x_vector_primal_frac"]),
             str(entry["x_vector_primal_rounded"])

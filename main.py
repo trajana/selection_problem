@@ -23,7 +23,7 @@ c_range = 100  # Range for random costs
 num_runs = 10  # Number of runs for the loop
 USE_FIXED_COSTS = False  # True = use fixed costs from utils.py (align n and N with the fixed cost matrix, False =
 # use random costs
-n_values = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]  # List of n-values (no. of items) to evaluate
+n_values = [6, 10, 16, 20, 26, 30, 36, 40, 46, 50, 56, 60, 66, 70]  # List of n-values (no. of items) to evaluate
 EXPORT_CSV = True  # Set True to enable CSV export
 PLOT = True  # Set True to enable plotting
 
@@ -80,7 +80,10 @@ if __name__ == "__main__":
             x_vector_primal_frac = [round(val, 2) for val in x_val_primal_frac]
             # print("\n--- Debug 3 ---")  # TODO: Überprüft  - rausnehmen
             # print(x_val_primal_rounded, x_vector_primal_rounded)  # TODO: Überprüft  - rausnehmen
+            fractional_count = sum(1 for val in x_val_primal_frac if 0.0001 < val < 0.9999)
+            fractional_ratio = fractional_count / n  # TODO: Evtl. rausnehmen
             print(f"Fractional values: {x_vector_primal_frac}")
+            print(f"Fractional variables: {fractional_count} out of {n} ({fractional_ratio:.2%})")
             print(f"Selected items (rounded): {x_vector_primal_rounded}")
             print(f"Objective value: {obj_val_primal:.2f}")
 
@@ -113,6 +116,8 @@ if __name__ == "__main__":
                 "ratio_primal_opt": ratio_primal_opt,
                 "integrality_gap": integrality_gap_primal,
                 "rounding_gap": rounding_gap_primal,
+                "fractional_count": fractional_count,
+                "fractional_ratio": fractional_ratio,
                 "x_vector_exact": x_vector_exact,
                 "x_vector_primal_frac": x_vector_primal_frac,
                 "x_vector_primal_rounded": x_vector_primal_rounded,
@@ -134,6 +139,20 @@ if __name__ == "__main__":
 
     # Optional: Plot results
     if PLOT:
-        from plot import plot_approximation_ratios_primal, plot_gaps_primal
+        from plot import (plot_approximation_ratios_primal, plot_gaps_primal, plot_histogram_of_xvals)
         plot_approximation_ratios_primal(CRITERION, num_runs, N, output_dir=RESULT_DIR)
         plot_gaps_primal(CRITERION, num_runs, N, output_dir=RESULT_DIR)
+
+        # Histogram
+        n_to_xvals = {}
+        n_to_max_frac_count = {}
+        for entry in all_results:
+            n = entry["n"]
+            xvals = entry["x_vector_primal_frac"]
+            frac_count = entry["fractional_count"]
+            n_to_xvals.setdefault(n, []).extend(xvals)
+            n_to_max_frac_count[n] = max(n_to_max_frac_count.get(n, 0), frac_count)
+        plot_histogram_of_xvals(n_to_xvals, output_dir=RESULT_DIR, n_to_max_frac_count=n_to_max_frac_count)
+
+pn_ratios = set(entry["p"] / entry["n"] for entry in all_results)
+print(f"p/n values in results: {pn_ratios}")
