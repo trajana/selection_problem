@@ -17,14 +17,14 @@ from utils import (get_fixed_costs, get_random_costs, print_costs, cost_matrix_t
                    print_all_results_from_pkl)
 
 # Base data TODO: Adjust as needed
-CRITERION = "maxmin"  # Choose minmax or maxmin
-N = 4  # Number of scenarios (discrete uncertainty sets)
+CRITERION = "minmax"  # Choose minmax or maxmin
+N = 2  # Number of scenarios (discrete uncertainty sets)
 c_range = 100  # Range for random costs
-num_runs = 10  # Number of runs for the loop
+num_runs = 100  # Number of runs for the loop
 USE_FIXED_COSTS = False  # True = use fixed costs from utils.py (align n and N with the fixed cost matrix, False =
 # use random costs
-n_values = [6, 10, 16, 20, 26, 30, 36, 40, 46, 50, 56, 60, 66, 70]  # List of n-values (no. of items) to evaluate
-EXPORT_CSV = True  # Set True to enable CSV export
+n_values = [2, 3, 4, 5, 6]  # List of n-values (no. of items) to evaluate
+EXPORT_CSV = False  # Set True to enable CSV export
 PLOT = True  # Set True to enable plotting
 
 # Create unique results subfolder based on criterion, N, and timestamp
@@ -36,7 +36,7 @@ if __name__ == "__main__":
     all_results = []
 
     for n in n_values:
-        p = n // 2
+        p = n // 3
         print(f"\n=== Running experiments for n = {n}, p = {p} ===")
 
         for run in range(num_runs):
@@ -89,10 +89,14 @@ if __name__ == "__main__":
 
             # Ratio of primal to exact objective value
             ratio_primal_opt = obj_val_primal / obj_val_exact if obj_val_exact != 0 else 0
-            integrality_gap_primal = obj_val_primal_lp / obj_val_exact if obj_val_exact != 0 else 0
+            # Integraliy gap and rounding gap calculations
+            if CRITERION == "minmax":
+                integrality_gap_primal = obj_val_exact / obj_val_primal_lp if obj_val_primal_lp != 0 else 0
+            else:  # maxmin
+                integrality_gap_primal = obj_val_primal_lp / obj_val_exact if obj_val_exact != 0 else 0
             rounding_gap_primal = obj_val_primal / obj_val_primal_lp if obj_val_primal_lp != 0 else 0
             print(f"Approximation ratio: {ratio_primal_opt:.2f}")
-            print(f"Integrality gap (LP / OPT): {integrality_gap_primal:.2f}")
+            print(f"Integrality gap: {integrality_gap_primal:.2f}")
             print(f"Rounding gap (rounded / LP): {rounding_gap_primal:.2f}")
 
             print("\n--- Summary ---")
@@ -139,9 +143,12 @@ if __name__ == "__main__":
 
     # Optional: Plot results
     if PLOT:
-        from plot import (plot_approximation_ratios_primal, plot_gaps_primal, plot_histogram_of_xvals)
+        from plot import (plot_approximation_ratios_primal, plot_integrality_gap_primal, plot_rounding_gap_primal,
+                          plot_histogram_of_xvals, plot_fractional_variable_count)
         plot_approximation_ratios_primal(CRITERION, num_runs, N, output_dir=RESULT_DIR)
-        plot_gaps_primal(CRITERION, num_runs, N, output_dir=RESULT_DIR)
+        plot_integrality_gap_primal(CRITERION, num_runs, N, output_dir=RESULT_DIR)
+        plot_rounding_gap_primal(CRITERION, num_runs, N, output_dir=RESULT_DIR)
+        plot_fractional_variable_count(CRITERION, num_runs, N, output_dir=RESULT_DIR)
 
         # Histogram
         n_to_xvals = {}
@@ -153,6 +160,3 @@ if __name__ == "__main__":
             n_to_xvals.setdefault(n, []).extend(xvals)
             n_to_max_frac_count[n] = max(n_to_max_frac_count.get(n, 0), frac_count)
         plot_histogram_of_xvals(n_to_xvals, output_dir=RESULT_DIR, n_to_max_frac_count=n_to_max_frac_count)
-
-pn_ratios = set(entry["p"] / entry["n"] for entry in all_results)
-print(f"p/n values in results: {pn_ratios}")

@@ -60,9 +60,9 @@ def plot_approximation_ratios_primal(criterion, num_runs, N, output_dir="results
     # plt.show()  # if activated: close plot window to continue execution of run_all.py
     print(f"✅ Plot saved to {output_plot}")
 
-def plot_gaps_primal(criterion, num_runs, N, output_dir="results"):
+def plot_integrality_gap_primal(criterion, num_runs, N, output_dir="results"):
     pkl_file = os.path.join(output_dir, f"all_results_{criterion}.pkl")
-    output_plot = os.path.join(output_dir, f"plot_gaps_{criterion}.png")
+    output_plot = os.path.join(output_dir, f"plot_integrality_gap_{criterion}.png")
 
     if not os.path.exists(pkl_file):
         print(f"⚠️ File {pkl_file} not found.")
@@ -73,37 +73,69 @@ def plot_gaps_primal(criterion, num_runs, N, output_dir="results"):
         all_results = pickle.load(f)
 
     # Organize data by n
-    n_to_integrality_gaps = {}
-    n_to_rounding_gaps = {}
-
+    n_to_gaps = {}
     for entry in all_results:
         n = entry["n"]
-        n_to_integrality_gaps.setdefault(n, []).append(entry["integrality_gap"])
-        n_to_rounding_gaps.setdefault(n, []).append(entry["rounding_gap"])
+        n_to_gaps.setdefault(n, []).append(entry["integrality_gap"])
 
     # Prepare data for plotting
-    n_values = sorted(n_to_integrality_gaps.keys())
-    avg_integrality = [np.mean(n_to_integrality_gaps[n]) for n in n_values]
-    ci_integrality = [1.96 * np.std(n_to_integrality_gaps[n]) / np.sqrt(len(n_to_integrality_gaps[n])) for n in
-                      n_values]
-
-    avg_rounding = [np.mean(n_to_rounding_gaps[n]) for n in n_values]
-    ci_rounding = [1.96 * np.std(n_to_rounding_gaps[n]) / np.sqrt(len(n_to_rounding_gaps[n])) for n in n_values]
+    n_values = sorted(n_to_gaps.keys())
+    avg_vals = [np.mean(n_to_gaps[n]) for n in n_values]
+    ci_vals = [1.96 * np.std(n_to_gaps[n]) / np.sqrt(len(n_to_gaps[n])) for n in n_values]
 
     # Plot
     plt.figure(figsize=(10, 6))
-    plt.errorbar(n_values, avg_integrality, yerr=ci_integrality, fmt='-o', capsize=5, label="Integrality Gap")
-    plt.errorbar(n_values, avg_rounding, yerr=ci_rounding, fmt='-s', capsize=5, label="Rounding Gap")
+    plt.errorbar(n_values, avg_vals, yerr=ci_vals, fmt='-o', capsize=5, color="tab:blue", label="Integrality Gap")
     plt.xlabel("Number of items (n)")
-    plt.ylabel("Gap in objective value")
+    ylabel = "IP Objective / LP Objective" if criterion == "minmax" else "LP Objective / IP Objective"
+    plt.ylabel(ylabel)
     titles = {"minmax": "Min-Max", "maxmin": "Max-Min"}
-    plt.title(f"Gaps: LP vs. Integer ({titles[criterion]})\n(Average over {num_runs} runs, {N} scenarios)")
+    plt.title(f"Integrality Gap ({titles[criterion]})\n(Average over {num_runs} runs, {N} scenarios)")
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.legend()
     plt.xticks(n_values)
     plt.tight_layout()
     plt.savefig(output_plot)
-    print(f"✅ Gap plot saved to {output_plot}")
+    plt.close()
+    print(f"✅ Integrality gap plot saved to {output_plot}")
+
+def plot_rounding_gap_primal(criterion, num_runs, N, output_dir="results"):
+    pkl_file = os.path.join(output_dir, f"all_results_{criterion}.pkl")
+    output_plot = os.path.join(output_dir, f"plot_rounding_gap_{criterion}.png")
+
+    if not os.path.exists(pkl_file):
+        print(f"⚠️ File {pkl_file} not found.")
+        return
+
+    # Load results
+    with open(pkl_file, "rb") as f:
+        all_results = pickle.load(f)
+
+    # Organize data by n
+    n_to_gaps = {}
+    for entry in all_results:
+        n = entry["n"]
+        n_to_gaps.setdefault(n, []).append(entry["rounding_gap"])
+
+    # Prepare data for plotting
+    n_values = sorted(n_to_gaps.keys())
+    avg_vals = [np.mean(n_to_gaps[n]) for n in n_values]
+    ci_vals = [1.96 * np.std(n_to_gaps[n]) / np.sqrt(len(n_to_gaps[n])) for n in n_values]
+
+    # Plot
+    plt.figure(figsize=(10, 6))
+    plt.errorbar(n_values, avg_vals, yerr=ci_vals, fmt='-s', capsize=5, color="tab:orange", label="Rounding Gap")
+    plt.xlabel("Number of items (n)")
+    plt.ylabel("Rounded Objective / LP Objective")
+    titles = {"minmax": "Min-Max", "maxmin": "Max-Min"}
+    plt.title(f"Rounding Gap ({titles[criterion]})\n(Average over {num_runs} runs, {N} scenarios)")
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.legend()
+    plt.xticks(n_values)
+    plt.tight_layout()
+    plt.savefig(output_plot)
+    plt.close()
+    print(f"✅ Rounding gap plot saved to {output_plot}")
 
 def plot_histogram_of_xvals(n_to_xvals, output_dir="results", n_to_max_frac_count=None):
     for n, xvals in n_to_xvals.items():
@@ -124,3 +156,46 @@ def plot_histogram_of_xvals(n_to_xvals, output_dir="results", n_to_max_frac_coun
         plt.savefig(output_file)
         plt.close()
         print(f"✅ Histogram for n = {n} saved to {output_file}")
+
+def plot_fractional_variable_count(criterion, num_runs, N, output_dir="results"):
+    pkl_file = os.path.join(output_dir, f"all_results_{criterion}.pkl")
+    output_plot = os.path.join(output_dir, f"plot_fractional_count_{criterion}.png")
+
+    if not os.path.exists(pkl_file):
+        print(f"⚠️ File {pkl_file} not found.")
+        return
+
+    # Load data
+    with open(pkl_file, "rb") as f:
+        all_results = pickle.load(f)
+
+    # Group by n
+    n_values = []
+    frac_counts = []
+
+    for entry in all_results:
+        n_values.append(entry["n"])
+        frac_counts.append(entry["fractional_count"])
+
+    # Convert to numpy arrays for easier manipulation
+    n_array = np.array(n_values)
+    frac_array = np.array(frac_counts)
+    # Add jitter to x-axis so overlapping points become visible
+    jitter_strength = 0.3
+    x_jittered = n_array + np.random.uniform(-jitter_strength, jitter_strength, size=len(n_array))
+
+    # Plot
+    plt.figure(figsize=(10, 6))
+    plt.scatter(x_jittered, frac_array, alpha=0.5, label="Fractional variables (per run)")
+    plt.axhline(y=N, color='red', linestyle='--', label=f"Theoretical upper bound (N = {N})")
+    plt.xlabel("Number of items (n)")
+    plt.ylabel("Number of fractional variables")
+    titles = {"minmax": "Min-Max", "maxmin": "Max-Min"}
+    plt.title(f"Scatter: Fractional Variables ({titles[criterion]})\n(Each point = one run)")
+    plt.grid(True, linestyle="--", alpha=0.5)
+    plt.legend()
+    plt.xticks(sorted(set(n_values)))  # Only unique n's on x-axis
+    plt.tight_layout()
+    plt.savefig(output_plot)
+    plt.close()
+    print(f"✅ Fractional variable plot saved to {output_plot}")
