@@ -1,4 +1,4 @@
-# primal_rounding.py
+# primal_rounding_minmax.py
 
 # Using Primal Rounding to approximate the Robust Selection Problem with discrete uncertainty and the min-max criterion.
 
@@ -10,7 +10,7 @@ import gurobipy as gp
 from gurobipy import GRB
 
 
-def solve_primal_rounding(costs, n, p, N, criterion):  # function
+def solve_primal_rounding_minmax(costs, n, p, k):  # function
     try:
 
         # Create optimization model
@@ -21,24 +21,14 @@ def solve_primal_rounding(costs, n, p, N, criterion):  # function
         z = m.addVar()  # Continuous variable for the worst-case cost
 
         # Set objective
-        if criterion == "minmax":
-            m.setObjective(z, GRB.MINIMIZE)
-        elif criterion == "maxmin":
-            m.setObjective(z, GRB.MAXIMIZE)
+        m.setObjective(z, GRB.MINIMIZE)
 
         # Add constraints
         m.addConstr(gp.quicksum(x[i] for i in range(1, n + 1)) == p, name="select_p_items")  # Select exactly p
 
-        if criterion == "minmax":
-            m.addConstrs(
-                (gp.quicksum(costs[s, i] * x[i] for i in range(1, n + 1)) <= z for s in range(1, N + 1)),
-                name="worst_case_cost")
-        elif criterion == "maxmin":
-            m.addConstrs(
-                (gp.quicksum(costs[s, i] * x[i] for i in range(1, n + 1)) >= z for s in range(1, N + 1)),
-                name="best_case_cost")
-        else:
-            raise ValueError(f"Invalid criterion: {criterion}")
+        m.addConstrs(
+            (gp.quicksum(costs[s, i] * x[i] for i in range(1, n + 1)) <= z for s in range(1, k + 1)),
+            name="worst_case_cost")
 
         # Optimize model
         m.optimize()
@@ -51,7 +41,8 @@ def solve_primal_rounding(costs, n, p, N, criterion):  # function
             key=lambda item: item[1],
             reverse=True
         )[:p]  # Select top p items
-        selected_indices_primal = [i for i, _ in selected_items_primal]  # Get indices of selected items
+        selected_indices_primal = [i for i, _ in selected_items_primal]  # Get indices of selected
+        tau = min(x_val_primal_frac[i] for i in selected_indices_primal)
         x_vector_primal_rounded = [1 if i in selected_indices_primal else 0 for i in range(n)]  # Binary vector
 
         # Post-solution checks and debug prints TODO: Danach wieder rausnehmen
@@ -63,26 +54,21 @@ def solve_primal_rounding(costs, n, p, N, criterion):  # function
             print(f"x[{i + 1}] = {x_vector_primal_rounded[i]}")  # TODO: End of debug prints
 
         # Compute worst-case cost of rounded solution (results)
-        if criterion == "minmax":
-            obj_val_primal = max(
-                sum(costs[s, i + 1] for i in range(n) if x_vector_primal_rounded[i] == 1)
-                for s in range(1, N + 1))  # Computes the maximum cost across all scenarios for the rounded solution
-        else:
-            obj_val_primal = min(
-                sum(costs[s, i + 1] for i in range(n) if x_vector_primal_rounded[i] == 1)
-                for s in range(1, N + 1))  # Computes the minimum cost across all scenarios for the rounded solution
+        obj_val_primal = max(
+            sum(costs[s, i + 1] for i in range(n) if x_vector_primal_rounded[i] == 1)
+            for s in range(1, k + 1))  # Computes the maximum cost across all scenarios for the rounded solution
 
         # Debugging worst case cost  # TODO: Danach wieder rausnehmen
         print("\n--- Scenario costs (rounded solution): ---")
         scenario_costs = []
-        for s in range(1, N + 1):
+        for s in range(1, k + 1):
             cost_s = sum(costs[s, i + 1] for i in range(n) if x_vector_primal_rounded[i] == 1)
             scenario_costs.append(cost_s)
             print(f"Scenario {s}: total cost = {cost_s}")
         print(f"\nMax scenario cost (should match obj_val_primal): {max(scenario_costs)}")
         print(f"Returned objective value (obj_val_primal): {obj_val_primal}")  # TODO: End of debug prints
 
-        return obj_val_primal, x_val_primal_frac, x_vector_primal_rounded, obj_val_primal_lp
+        return obj_val_primal, x_val_primal_frac, x_vector_primal_rounded, obj_val_primal_lp, tau
 
     # Error handling
     except gp.GurobiError as e:

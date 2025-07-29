@@ -1,6 +1,6 @@
-# exact_solution.py
+# exact_solution_minmax.py
 
-# Robust Selection Problem with discrete uncertainty and using the min-max criterion.
+# Robust Selection Problem with discrete uncertainty and using the Min-Max criterion.
 
 # Description: There are n items with cost c[s,i]. The goal is to pick exactly p items such that the wost-case cost is
 # minimized. The problem is formulated as a Mixed Integer Linear Program using the epigraph-reformulation.
@@ -8,7 +8,7 @@
 import gurobipy as gp
 from gurobipy import GRB
 
-def solve_exact_robust_selection(costs, n, p, N, criterion):  # function
+def solve_exact_robust_selection_minmax(costs, n, p, N):  # function
     try:
 
         # Create optimization model
@@ -19,24 +19,14 @@ def solve_exact_robust_selection(costs, n, p, N, criterion):  # function
         z = m.addVar()  # Continuous variable for the worst-case cost
 
         # Set objective
-        if criterion == "minmax":
-            m.setObjective(z, GRB.MINIMIZE)
-        elif criterion == "maxmin":
-            m.setObjective(z, GRB.MAXIMIZE)
+        m.setObjective(z, GRB.MINIMIZE)
 
         # Add constraints
         m.addConstr(gp.quicksum(x[i] for i in range(1, n + 1)) == p, name="select_p_items")  # Select exactly
 
-        if criterion == "minmax":
-            m.addConstrs(
-                (gp.quicksum(costs[s, i] * x[i] for i in range(1, n + 1)) <= z for s in range(1, N + 1)),
-                name="worst_case_cost")  # Worst-case cost constraints
-        elif criterion == "maxmin":
-            m.addConstrs(
-                (gp.quicksum(costs[s, i] * x[i] for i in range(1, n + 1)) >= z for s in range(1, N + 1)),
-                name="best_case_cost")  # Best-case cost constraints
-        else:
-            raise ValueError(f"Invalid criterion: {criterion}")
+        m.addConstrs(
+            (gp.quicksum(costs[s, i] * x[i] for i in range(1, n + 1)) <= z for s in range(1, N + 1)),
+            name="worst_case_cost")  # Worst-case cost constraints
 
         # Optimize model
         m.optimize()
@@ -54,9 +44,9 @@ def solve_exact_robust_selection(costs, n, p, N, criterion):  # function
         # TODO: End of debug prints
 
         # Print results
-        x_val_exact = [x[i].X for i in range(1, n + 1)]
-        obj_val_exact = m.ObjVal # Wert von z
-        return obj_val_exact, x_val_exact
+        x_val_exact_minmax = [x[i].X for i in range(1, n + 1)]
+        obj_val_exact_minmax = m.ObjVal # Wert von z
+        return obj_val_exact_minmax, x_val_exact_minmax
 
         # Error handling
     except gp.GurobiError as e:

@@ -6,71 +6,125 @@
 # for different values of n (number of items), and plots the ratio with error bars (standard deviation).
 # The plot helps evaluate how the performance of the approximation algorithms scales with problem size.
 
-import pickle
 import matplotlib
-matplotlib.use('TkAgg')  # Use TkAgg backend for matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+matplotlib.use('TkAgg')  # Use TkAgg backend for matplotlib
 
-def plot_approximation_ratios_primal(criterion, num_runs, N, output_dir="results"):
-    pkl_file = f"{output_dir}/all_results_{criterion}.pkl"
+# Global matplotlib settings for consistent styling
+matplotlib.rcParams.update({
+    "text.usetex": True,
+    "font.family": "serif",
+    "font.serif": ["Computer Modern"],
+    "axes.labelsize": 12,
+    "font.size": 12,
+    "legend.fontsize": 10,
+    "xtick.labelsize": 10,
+    "ytick.labelsize": 10,
+    "grid.linestyle": ":",
+    "grid.linewidth": 0.5,
+    "grid.alpha": 0.4,
+    "axes.grid": True,
+    "figure.figsize": (10, 6)
+})
+
+
+def plot_primal_rounding_only(all_results, num_runs, var_param, output_dir="results"):
+    criterion = "minmax"
+    output_plot = f"{output_dir}/plot_primal_rounding_only_{criterion}.png"
+
+    # Organize data by varying parameter (n, k, p)
+    param_to_ratios = {}
+    for entry in all_results:
+        param = entry["varying_param"]
+        ratio = entry["ratio_primal_opt"]
+        param_to_ratios.setdefault(param, []).append(ratio)
+
+    # Prepare data for plotting
+    param_values = sorted(param_to_ratios.keys())
+    avg_ratios = [np.mean(param_to_ratios[param]) for param in param_values]
+    ci_ratios_95 = [1.96 * np.std(param_to_ratios[param]) / np.sqrt(len(param_to_ratios[param]))
+                    for param in param_values]
+
+    # Plot
+    plt.errorbar(param_values, avg_ratios, yerr=ci_ratios_95, fmt='-o', capsize=5,
+                 label="Primal Rounding (Ø $\\pm$ 95\\% CI)")
+    xlabel_map = {
+        "n": r"Number of items $n$",
+        "k": r"Number of scenarios $k$",
+        "p": r"Number of items to select $p$"
+    }
+    plt.xlabel(xlabel_map.get(var_param, ""))
+    plt.ylabel(r"Approximation ratio $\mathrm{ALG}/\mathrm{OPT}$")
+    titles = {"minmax": "Min-Max", "maxmin": "Max-Min"}
+    plt.title(f"Primal Rounding Approximation Ratio ({titles[criterion]})\n"f"(Average over {num_runs} runs)")
+    plt.xticks(param_values, rotation=45)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_plot)
+    print(f"✅ Plot saved to {output_plot}")
+
+
+def plot_approximation_ratios_primal(all_results, num_runs, k, output_dir="results"):
+    criterion = "minmax"
     output_plot = f"{output_dir}/plot_ratio_{criterion}.png"
-
-    if not os.path.exists(pkl_file):
-        print(f"⚠️ File {pkl_file} not found.")
-        return
-
-    # Load results
-    with open(pkl_file, "rb") as f:
-        all_results = pickle.load(f)
 
     # Organize data by n
     n_to_ratios = {}
+    n_to_bounds = {}
+    n_to_guarantee = {}
+    n_to_optlp_div_alg = {}
     for entry in all_results:
         n = entry["n"]
         ratio = entry["ratio_primal_opt"]
-        if n not in n_to_ratios:
-            n_to_ratios[n] = []
-        n_to_ratios[n].append(ratio)
+        bound = entry["a_posteriori_bound"]
+        guarantee = entry["approximation_guarantee"]
+        opt_lp_div_alg = entry["opt_lp_div_alg"]
+        n_to_ratios.setdefault(n, []).append(ratio)
+        n_to_bounds.setdefault(n, []).append(bound)
+        n_to_guarantee.setdefault(n, []).append(guarantee)
+        n_to_optlp_div_alg.setdefault(n, []).append(opt_lp_div_alg)
 
     # Prepare data for plotting
     n_values = sorted(n_to_ratios.keys())
     avg_ratios = [np.mean(n_to_ratios[n]) for n in n_values]
-    #std_devs = [np.std(n_to_ratios[n]) for n in n_values]
-    ci_95 = [1.96 * np.std(n_to_ratios[n]) / np.sqrt(len(n_to_ratios[n])) for n in n_values]
+    # std_devs = [np.std(n_to_ratios[n]) for n in n_values]
+    ci_ratios_95 = [1.96 * np.std(n_to_ratios[n]) / np.sqrt(len(n_to_ratios[n])) for n in n_values]
+    avg_bounds = [np.mean(n_to_bounds[n]) for n in n_values]
+    ci_bounds_95 = [1.96 * np.std(n_to_bounds[n]) / np.sqrt(len(n_to_bounds[n])) for n in n_values]
+    avg_guarantees = [np.mean(n_to_guarantee[n]) for n in n_values]
+    avg_optlp_div_alg = [np.mean(n_to_optlp_div_alg[n]) for n in n_values]
+    ci_optlp_div_alg_95 = [
+        1.96 * np.std(n_to_optlp_div_alg[n]) / np.sqrt(len(n_to_optlp_div_alg[n])) for n in n_values
+    ]
 
     # Plot
-    plt.figure(figsize=(10, 6))
-    plt.errorbar(n_values, avg_ratios, yerr=ci_95, fmt='-o', capsize=5, label="Primal Rounding (Ø ± 95% CI)")
-    plt.xlabel("Number of items (n)")
-    plt.ylabel("Approximation ratio (ALG / OPT)")
+    plt.figure()
+    plt.errorbar(n_values, avg_ratios, yerr=ci_ratios_95, fmt='-o', capsize=5,
+                 label="Primal Rounding (Ø $\\pm$ 95\\% CI)")
+    plt.errorbar(n_values, avg_bounds, yerr=ci_bounds_95, fmt='--s', capsize=5,
+                 label=r"A-posteriori bound $1/\tau$ (Ø $\pm$ 95\% CI)")
+    plt.errorbar(n_values, avg_optlp_div_alg, yerr=ci_optlp_div_alg_95, fmt='-.d', capsize=5,
+                 label=r"A-posteriori bound $\mathrm{OPT}_{\mathrm{LP}} / \mathrm{ALG}$ (Ø $\pm$ 95\% CI)")
+    plt.plot(n_values, avg_guarantees, ':^', label=r"Approximation guarantee $\min(k, n - p + 1)$")
+    plt.xlabel(r"Number of items $n$")
+    plt.ylabel(r"Relative performance ratio")
+    plt.yscale('log')
     titles = {"minmax": "Min-Max", "maxmin": "Max-Min"}
-    plt.title(f"Approximation Ratio ({titles[criterion]}): Primal Rounding vs. Optimal\n"
-              f"(Average over {num_runs} runs, {N} scenarios)")
-    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.title(f"Approximation Ratio vs. Approximation guarantees\n"
+              f"(Average over {num_runs} runs, {k} scenarios)")
     plt.xticks(n_values)
-    # if criterion == "minmax":
-    #     plt.ylim(1.0, 1.2)
-    # elif criterion == "maxmin":
-    #     plt.ylim(0.8, 1.0)
+    # plt.ylim(1.0, 1.5)
     plt.legend()
     plt.tight_layout()
     plt.savefig(output_plot)
-    # plt.show()  # if activated: close plot window to continue execution of run_all.py
     print(f"✅ Plot saved to {output_plot}")
 
-def plot_integrality_gap_primal(criterion, num_runs, N, output_dir="results"):
-    pkl_file = os.path.join(output_dir, f"all_results_{criterion}.pkl")
+
+def plot_integrality_gap_primal(all_results, num_runs, k, output_dir="results"):
+    criterion = "minmax"
     output_plot = os.path.join(output_dir, f"plot_integrality_gap_{criterion}.png")
-
-    if not os.path.exists(pkl_file):
-        print(f"⚠️ File {pkl_file} not found.")
-        return
-
-    # Load results
-    with open(pkl_file, "rb") as f:
-        all_results = pickle.load(f)
 
     # Organize data by n
     n_to_gaps = {}
@@ -84,32 +138,28 @@ def plot_integrality_gap_primal(criterion, num_runs, N, output_dir="results"):
     ci_vals = [1.96 * np.std(n_to_gaps[n]) / np.sqrt(len(n_to_gaps[n])) for n in n_values]
 
     # Plot
-    plt.figure(figsize=(10, 6))
+    plt.figure()
     plt.errorbar(n_values, avg_vals, yerr=ci_vals, fmt='-o', capsize=5, color="tab:blue", label="Integrality Gap")
     plt.xlabel("Number of items (n)")
     ylabel = "IP Objective / LP Objective" if criterion == "minmax" else "LP Objective / IP Objective"
     plt.ylabel(ylabel)
     titles = {"minmax": "Min-Max", "maxmin": "Max-Min"}
-    plt.title(f"Integrality Gap ({titles[criterion]})\n(Average over {num_runs} runs, {N} scenarios)")
-    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.title(f"Integrality Gap ({titles[criterion]})\n(Average over {num_runs} runs, {k} scenarios)")
     plt.legend()
     plt.xticks(n_values)
+    if criterion == "minmax":
+        plt.ylim(1.0, 1.3)
+    elif criterion == "maxmin":
+        plt.ylim(0.7, 1.0)
     plt.tight_layout()
     plt.savefig(output_plot)
     plt.close()
     print(f"✅ Integrality gap plot saved to {output_plot}")
 
-def plot_rounding_gap_primal(criterion, num_runs, N, output_dir="results"):
-    pkl_file = os.path.join(output_dir, f"all_results_{criterion}.pkl")
+
+def plot_rounding_gap_primal(all_results, num_runs, k, output_dir="results"):
+    criterion = "minmax"
     output_plot = os.path.join(output_dir, f"plot_rounding_gap_{criterion}.png")
-
-    if not os.path.exists(pkl_file):
-        print(f"⚠️ File {pkl_file} not found.")
-        return
-
-    # Load results
-    with open(pkl_file, "rb") as f:
-        all_results = pickle.load(f)
 
     # Organize data by n
     n_to_gaps = {}
@@ -123,51 +173,24 @@ def plot_rounding_gap_primal(criterion, num_runs, N, output_dir="results"):
     ci_vals = [1.96 * np.std(n_to_gaps[n]) / np.sqrt(len(n_to_gaps[n])) for n in n_values]
 
     # Plot
-    plt.figure(figsize=(10, 6))
+    plt.figure()
     plt.errorbar(n_values, avg_vals, yerr=ci_vals, fmt='-s', capsize=5, color="tab:orange", label="Rounding Gap")
     plt.xlabel("Number of items (n)")
     plt.ylabel("Rounded Objective / LP Objective")
     titles = {"minmax": "Min-Max", "maxmin": "Max-Min"}
-    plt.title(f"Rounding Gap ({titles[criterion]})\n(Average over {num_runs} runs, {N} scenarios)")
-    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.title(f"Rounding Gap ({titles[criterion]})\n(Average over {num_runs} runs, {k} scenarios)")
     plt.legend()
     plt.xticks(n_values)
+    plt.ylim(1.0, 1.3)
     plt.tight_layout()
     plt.savefig(output_plot)
     plt.close()
     print(f"✅ Rounding gap plot saved to {output_plot}")
 
-def plot_histogram_of_xvals(n_to_xvals, output_dir="results", n_to_max_frac_count=None):
-    for n, xvals in n_to_xvals.items():
-        plt.figure(figsize=(8, 5))
-        plt.hist(xvals, bins=20, edgecolor='black')
 
-        if n_to_max_frac_count and n in n_to_max_frac_count:
-            max_count = n_to_max_frac_count[n]
-            title = f"LP x[i] values for n = {n}\nMax. # fractional x[i]: {max_count}"
-        else:
-            title = f"LP x[i] values for n = {n}"
-
-        plt.title(title)
-        plt.xlabel("x[i] value")
-        plt.ylabel("Frequency")
-        plt.tight_layout()
-        output_file = os.path.join(output_dir, f"histogram_xvals_n_{n}.png")
-        plt.savefig(output_file)
-        plt.close()
-        print(f"✅ Histogram for n = {n} saved to {output_file}")
-
-def plot_fractional_variable_count(criterion, num_runs, N, output_dir="results"):
-    pkl_file = os.path.join(output_dir, f"all_results_{criterion}.pkl")
+def plot_fractional_variable_count(all_results, num_runs, k, output_dir="results"):
+    criterion = "minmax"
     output_plot = os.path.join(output_dir, f"plot_fractional_count_{criterion}.png")
-
-    if not os.path.exists(pkl_file):
-        print(f"⚠️ File {pkl_file} not found.")
-        return
-
-    # Load data
-    with open(pkl_file, "rb") as f:
-        all_results = pickle.load(f)
 
     # Group by n
     n_values = []
@@ -185,14 +208,13 @@ def plot_fractional_variable_count(criterion, num_runs, N, output_dir="results")
     x_jittered = n_array + np.random.uniform(-jitter_strength, jitter_strength, size=len(n_array))
 
     # Plot
-    plt.figure(figsize=(10, 6))
+    plt.figure()
     plt.scatter(x_jittered, frac_array, alpha=0.5, label="Fractional variables (per run)")
-    plt.axhline(y=N, color='red', linestyle='--', label=f"Theoretical upper bound (N = {N})")
+    plt.axhline(y=k, color='red', linestyle='--', label=f"Theoretical upper bound (k = {k})")
     plt.xlabel("Number of items (n)")
     plt.ylabel("Number of fractional variables")
     titles = {"minmax": "Min-Max", "maxmin": "Max-Min"}
     plt.title(f"Scatter: Fractional Variables ({titles[criterion]})\n(Each point = one run)")
-    plt.grid(True, linestyle="--", alpha=0.5)
     plt.legend()
     plt.xticks(sorted(set(n_values)))  # Only unique n's on x-axis
     plt.tight_layout()
