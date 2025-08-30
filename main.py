@@ -46,7 +46,7 @@ n: int | None = None
 p: int | None = None
 k: int | None = None
 
-# Base data TODO: Adjust as needed
+# Base data
 ALGORITHMS = ["primal_dual_minmax", "primal_minmax", "primal_maxmin"]  # Choose algorithms that should be run.
 # Available: "primal_minmax", "primal_maxmin", "primal_dual_minmax"
 var_param = "p"  # x-axis for the plot, can be "n" or "k" or "p"

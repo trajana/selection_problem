@@ -14,7 +14,7 @@ import pickle
 # Fixed costs
 def get_fixed_costs(n=None, k=None):
     fixed_costs = [
-        [1, 1, 5, 5],  # Scenario 1 TODO: Adjust as needed
+        [1, 1, 5, 5],  # Scenario 1
         [5, 5, 1, 1],  # Scenario 2
         [1, 1, 5, 5],
         [5, 5, 1, 1]

@@ -3,6 +3,8 @@
 # Script to generate and save random cost instances for the robust selection problem. This was used to create the cost
 # matrices for the experiments in the thesis. The results are saved in the file repro_costs.
 
+# Not intended to be run as part of the main program, just included for completeness and transparency.
+
 import os
 import pickle
 from utils import get_random_costs

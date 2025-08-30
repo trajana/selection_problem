@@ -3,7 +3,7 @@
 # Approximation Algorithms for the Robust Selection Problem
 
 This repository provides a modular Python implementation for solving the **Robust Selection Problem** under discrete 
-uncertainty using a variety of **approximation algorithms** or a heuristic.
+uncertainty using a variety of **approximation algorithms** or a heuristic. It is part of a Master's thesis.
 
 ## Problem Description
 
@@ -20,7 +20,7 @@ this case.
 ## Features
 
 The repository provides both **exact formulations** (via Mixed Integer Linear Programming using Gurobi) 
-and several **approximation algorithms**:
+and several **approximation algorithms** / **heuristics**:
 
 The current implementation supports:
 
@@ -86,8 +86,8 @@ The current implementation supports:
     | `PLOT`       | Enable/disable automatic plot generation                                                                   | `True` / `False`                                                                                          | line 69    | `True`          |
     | `DEBUG`      | Enable/disable detailed debug prints (not recommended for large instances due to excessive console output) | `True` / `False`                                                                                          | line 70    | `False`          |
 
-Note: If you want to replicate the experiments from the thesis, you need to run the code three times, once for each 
-varying parameter (`n`, `k`, and `p`), using the pre-specified `var_values` for each.
+    Note: If you want to replicate the experiments from the thesis, you need to run the code three times, once for each 
+    varying parameter (`n`, `k`, and `p`), using the pre-specified default values for all other parameters.
 
 2. **Run the script**:
    ```bash
