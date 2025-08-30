@@ -2,19 +2,22 @@
 
 # Utility functions for the robust selection problem.
 
-# Includes generation of fixed or random cost vectors, cost printing, and conversion to dictionary format.
+# Includes generation of fixed or random cost matrices, conversion to dictionary format, debugging prints, helper
+# functions for primal rounding.
 # To use fixed costs, define scenario-specific cost vectors in get_fixed_costs().
 
 import random
 import pandas as pd
-import pickle  # TODO: Remove nach debugging
+import pickle
 
 
 # Fixed costs
 def get_fixed_costs(n=None, k=None):
     fixed_costs = [
-        [5, 4, 3, 6],  # Scenario  TODO: Adjust as needed
-        [3, 6, 3, 2]   # Scenario 2
+        [1, 1, 5, 5],  # Scenario 1 TODO: Adjust as needed
+        [5, 5, 1, 1],  # Scenario 2
+        [1, 1, 5, 5],
+        [5, 5, 1, 1]
     ]
 
     if k is not None and k != len(fixed_costs):
@@ -27,11 +30,13 @@ def get_fixed_costs(n=None, k=None):
 
 # Random costs
 def get_random_costs(n, k, c_range=100):
-    return [[random.randint(1, c_range) for _ in range(n)] for _ in range(k)]
+    return [[random.randint(0, c_range) for _ in range(n)] for _ in range(k)]
 
 
 # Print costs in a readable format
-def print_costs(c):
+def dprint_costs(c, debug=False):
+    if not debug:
+        return
     k = len(c)
     n = len(c[0])
     for s in range(1, k + 1):
@@ -45,8 +50,10 @@ def cost_matrix_to_dict(c):
     return {(s + 1, i + 1): c[s][i] for s in range(len(c)) for i in range(len(c[0]))}
 
 
-# View all results from a .pkl in a table TODO: Löschen, wenn nicht mehr benötigt
-def print_all_results_from_pkl(pkl_path):
+# View all results from a .pkl in a table
+def dprint_all_results_from_pkl(pkl_path, debug=False):
+    if not debug:
+        return
     with open(pkl_path, "rb") as f:
         all_results = pickle.load(f)
     # Convert the list of dictionaries into a pandas DataFrame for tabular display
@@ -59,8 +66,8 @@ def print_all_results_from_pkl(pkl_path):
 
 
 def build_chunks_with_fill(sorted_x_vals, p):
-    def chunk_into_p(lst, p):
-        return [lst[i:i + p] for i in range(0, len(lst), p)]
+    def chunk_into_p(lst, block_size):
+        return [lst[i:i + block_size] for i in range(0, len(lst), block_size)]
 
     chunks = chunk_into_p(sorted_x_vals, p)
 

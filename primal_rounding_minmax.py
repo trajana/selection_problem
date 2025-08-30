@@ -2,23 +2,23 @@
 
 # Using Primal Rounding to approximate the Robust Selection Problem with discrete uncertainty and the min-max criterion.
 
-# Description: There are n items with cost c[s,i]. The goal is to pick exactly p items such that the wost-case cost is
+# Description: There are n items with cost c[s,i]. The goal is to pick exactly p items such that the worst-case cost is
 # minimized. The problem is formulated as a Mixed Integer Linear Program using the epigraph-reformulation. The
-# x-Variable is then relaxed to a continuous variable and the solution is rounded to a feasible solution.
+# decision variable x is relaxed to a continuous variable and the solution is rounded to a feasible solution.
 
 import gurobipy as gp
 from gurobipy import GRB
 
 
-def solve_primal_rounding_minmax(costs, n, p, k):  # function
+def solve_primal_rounding_minmax(costs, n, p, k, debug=False):
     try:
 
         # Create optimization model
-        m = gp.Model("primal_rounding_robust_selection")
+        m = gp.Model("primal_rounding_robust_selection_minmax")
 
         # Create variables
-        x = m.addVars(range(1, n + 1), vtype=GRB.CONTINUOUS, lb=0, ub=1, name="x")  # Binary variable for selection
-        z = m.addVar()  # Continuous variable for the worst-case cost
+        x = m.addVars(range(1, n + 1), vtype=GRB.CONTINUOUS, lb=0, ub=1, name="x")  # Continuous variable for selection
+        z = m.addVar(name="z")  # Continuous variable for the worst-case cost
 
         # Set objective
         m.setObjective(z, GRB.MINIMIZE)
@@ -45,34 +45,38 @@ def solve_primal_rounding_minmax(costs, n, p, k):  # function
         tau = min(x_val_primal_frac[i] for i in selected_indices_primal)
         x_vector_primal_rounded = [1 if i in selected_indices_primal else 0 for i in range(n)]  # Binary vector
 
-        # Post-solution checks and debug prints TODO: Danach wieder rausnehmen
-        print("\n---Relaxed x-values (fractional):---")
-        for i in range(n):
-            print(f"x[{i + 1}] = {x_val_primal_frac[i]:.4f}")
-        print("\n---Relaxed x-values (binary):---")
-        for i in range(n):
-            print(f"x[{i + 1}] = {x_vector_primal_rounded[i]}")  # TODO: End of debug prints
+        # Post-solution checks and debug prints
+        if debug:
+            print("\n---Relaxed x-values (fractional):---")
+            for i in range(n):
+                print(f"x[{i + 1}] = {x_val_primal_frac[i]:.4f}")
+            print("\n---Relaxed x-values (binary):---")
+            for i in range(n):
+                print(f"x[{i + 1}] = {x_vector_primal_rounded[i]}")
 
         # Compute worst-case cost of rounded solution (results)
         obj_val_primal = max(
             sum(costs[s, i + 1] for i in range(n) if x_vector_primal_rounded[i] == 1)
             for s in range(1, k + 1))  # Computes the maximum cost across all scenarios for the rounded solution
 
-        # Debugging worst case cost  # TODO: Danach wieder rausnehmen
-        print("\n--- Scenario costs (rounded solution): ---")
-        scenario_costs = []
-        for s in range(1, k + 1):
-            cost_s = sum(costs[s, i + 1] for i in range(n) if x_vector_primal_rounded[i] == 1)
-            scenario_costs.append(cost_s)
-            print(f"Scenario {s}: total cost = {cost_s}")
-        print(f"\nMax scenario cost (should match obj_val_primal): {max(scenario_costs)}")
-        print(f"Returned objective value (obj_val_primal): {obj_val_primal}")  # TODO: End of debug prints
+        # Debugging worst case cost
+        if debug:
+            print("\n--- Scenario costs (rounded solution): ---")
+            scenario_costs = []
+            for s in range(1, k + 1):
+                cost_s = sum(costs[s, i + 1] for i in range(n) if x_vector_primal_rounded[i] == 1)
+                scenario_costs.append(cost_s)
+                print(f"Scenario {s}: total cost = {cost_s}")
+            print(f"\nMax scenario cost (should match obj_val_primal): {max(scenario_costs)}")
+            print(f"Returned objective value (obj_val_primal): {obj_val_primal}")
 
         return obj_val_primal, x_val_primal_frac, x_vector_primal_rounded, obj_val_primal_lp, tau
 
     # Error handling
     except gp.GurobiError as e:
-        print(f"Error code {e.errno}: {e}")
-
-    except AttributeError:
-        print("Encountered an attribute error")
+        raise RuntimeError(
+            f"Gurobi failed while solving the model (error code {e.errno}): {e}") from e
+    except AttributeError as e:
+        raise RuntimeError(
+            "Failed to access solution attributes. "
+            "This usually means the model was not solved to optimality.") from e

@@ -1,23 +1,23 @@
 # main.py
 
-# Main script to run the robust selection problem with the min-max or max-min criterion.
+# Main script to run the robust selection problem with the min-max or max-min criterion and discrete uncertainty.
 
 # Calls functions from other modules to compute the exact and heuristic solutions.
-# Adjustable parameters: n (total items), p (items to select), k (scenarios), c_range (random cost range), EXPORT_CSV,
-# num_runs (number of runs in loop), n_values (for multiple n values), PLOT.
+# Adjustable parameters: n (total items), p (items to select), k (scenarios), c_range (random cost range), num_runs
+# (number of runs in loop), n_values (for multiple n values), PLOT.
 # Choose between fixed or random cost vectors. If using fixed costs, define them in utils.py (get_fixed_costs).
-# TODO: Notation mit Arbeit abgleichen / überprüfen
 
 import pickle
-import math  # For rounding calculations
 import os
+import math
 from datetime import datetime
 from exact_solution_minmax import solve_exact_robust_selection_minmax
 from exact_solution_maxmin import solve_exact_robust_selection_maxmin
 from primal_rounding_minmax import solve_primal_rounding_minmax
 from primal_rounding_maxmin import solve_primal_rounding_maxmin
-from utils import (get_fixed_costs, get_random_costs, print_costs, cost_matrix_to_dict,
-                   print_all_results_from_pkl)
+from primal_dual_rounding_minmax import solve_primal_dual_minmax_with_lp
+from utils import (get_fixed_costs, get_random_costs, dprint_costs, cost_matrix_to_dict,
+                   dprint_all_results_from_pkl)
 
 ALGORITHM_DISPATCH = {
     "primal_minmax": {
@@ -30,17 +30,30 @@ ALGORITHM_DISPATCH = {
         "type": "maxmin",
         "function": solve_primal_rounding_maxmin
     },
-    # todo: Add future algorithms
+    "primal_dual_minmax": {
+        "algorithm": "Primal-Dual Rounding",
+        "type": "minmax",
+        "function": solve_primal_dual_minmax_with_lp
+    }
 }
 
+# Pre-initialize
+var_values: list[int] = []
+fixed_n: int | None = None
+fixed_p: int | None = None
+fixed_k: int | None = None
+n: int | None = None
+p: int | None = None
+k: int | None = None
+
 # Base data TODO: Adjust as needed
-ALGORITHMS = ["primal_maxmin"]  # Choose all approximation algorithms that should be run. Available:
-# "primal_minmax", "primal_maxmin"
-var_param = "n"  # x-axis for the plot, can be "n" or "k" or "p"
+ALGORITHMS = ["primal_dual_minmax", "primal_minmax", "primal_maxmin"]  # Choose algorithms that should be run.
+# Available: "primal_minmax", "primal_maxmin", "primal_dual_minmax"
+var_param = "p"  # x-axis for the plot, can be "n" or "k" or "p"
 if var_param == "n":
-    var_values = [2, 4, 6, 8, 10, 12, 14]
-    #[2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70]
-    fixed_k = 2
+    var_values = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52,
+                  54, 56, 58, 60, 62, 64, 66, 68, 70]
+    fixed_k = 5
     fixed_p = None  # p = n//2, so no need to set it explicitly
 elif var_param == "k":
     fixed_n = 20
@@ -50,17 +63,36 @@ elif var_param == "p":
     fixed_n = 70
     fixed_k = 5
     var_values = list(range(2, fixed_n, 2))  # p in steps of 2 from 2 to n-2
-c_range = 100  # Range for random costs
 num_runs = 100  # Number of runs for the loop
-USE_FIXED_COSTS = False  # True = use fixed costs from utils.py (align n and k with the fixed cost matrix, False =
-# use random costs
+COST_MODE = "reproduce"    # Options: "random", "fixed", "reproduce"
+c_range = 100  # Range for random costs [0, c_range]
 PLOT = True  # Set True to enable plotting
+DEBUG = False  # Set True to enable debug prints
+
+
+def dprint(*args, **kwargs):
+    if DEBUG:
+        print(*args, **kwargs)
+
 
 if __name__ == "__main__":
     # Create unique results subfolder based on algorithm, k, and timestamp
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     RESULT_DIR = f"results/{var_param}_{timestamp}"
     os.makedirs(RESULT_DIR, exist_ok=True)
+    if COST_MODE not in {"random", "fixed", "reproduce"}:
+        raise ValueError(f"Unknown COST_MODE: {COST_MODE}")
+    VAR_DIR_MAP = {
+        "n": "n_var",
+        "k": "k_var",
+        "p": "p_var",
+    }
+    if var_param not in VAR_DIR_MAP:
+        raise ValueError(f"Invalid var_param: {var_param}.")
+
+    COSTS_SOURCE_DIR = os.path.join("repro_costs", VAR_DIR_MAP[var_param])
+
+    results_by_alg = {}
 
     for algorithm in ALGORITHMS:
         algo_info = ALGORITHM_DISPATCH.get(algorithm)
@@ -77,18 +109,30 @@ if __name__ == "__main__":
         all_results = []
 
         for a in var_values:
+            p_label = ""
             if var_param == "n":
                 n = a
-                p = n // 2 if fixed_p is None else fixed_p
+                if fixed_p is None:
+                    p = n // 2
+                    p_label = "n/2"
+                else:
+                    p = fixed_p
+                    p_label = str(fixed_p)
                 k = fixed_k
             elif var_param == "k":
                 n = fixed_n
                 p = fixed_p
+                p_label = str(fixed_p)
                 k = a
             elif var_param == "p":
                 n = fixed_n
                 p = a
+                p_label = str(a)
                 k = fixed_k
+
+            # Ensure these exist for all branches before we solve the exact problem
+            obj_val_exact: float = 0.0
+            x_vector_exact: list[int] = [0] * int(n)
 
             print(f"\n=== Running experiments for n = {n}, p = {p}, k = {k} ===")
 
@@ -96,67 +140,81 @@ if __name__ == "__main__":
                 print(f"\n=== Running {algorithm} ({criterion}) for run {run + 1} ===")
 
                 # Choose cost type
-                if USE_FIXED_COSTS:
+                if COST_MODE == "fixed":
                     c = get_fixed_costs(n, k)
-                else:
+                elif COST_MODE == "reproduce":
+                    cost_file = os.path.join(
+                        COSTS_SOURCE_DIR,
+                        f"costs_n{n}_p{p}_k{k}_a{a}_run{run + 1}.pkl"
+                    )
+                    if not os.path.exists(cost_file):
+                        raise FileNotFoundError(
+                            f"Repro file not found: {cost_file}. "
+                        )
+                    with open(cost_file, "rb") as f:
+                        c = pickle.load(f)
+                    print(f"[Loaded costs] {cost_file}")
+                elif COST_MODE == "random":
                     c = get_random_costs(n, k, c_range)
+                else:
+                    raise ValueError(f"Unknown COST_MODE: {COST_MODE}")
 
                 # Print costs
-                print("--- Cost matrix ---")
-                print_costs(c)
+                dprint("--- Cost matrix ---")
+                dprint_costs(c, debug=DEBUG)
                 costs = cost_matrix_to_dict(c)  # Convert costs to a dictionary with keys (s, i)
-                print("--- Cost dictionary ---")
-                print(costs)
-                # For CSV export, flatten the costs
-                flat_costs = [costs[(s + 1, i + 1)] for s in range(k) for i in range(n)]
+                dprint("--- Cost dictionary ---")
+                dprint(costs)
+                flat_costs = [costs[(s + 1, i + 1)] for s in range(k) for i in range(n)]  # Flattened cost list for .pkl
 
                 # Exact problem
                 if criterion == "minmax":
-                    print("\n--- Exact robust solution Min-Max ---")
-                    obj_val_exact_minmax, x_val_exact_minmax = solve_exact_robust_selection_minmax(costs, n, p, k)
+                    print("\n--- Exact robust solution min-max ---")
+                    obj_val_exact_minmax, x_val_exact_minmax = (solve_exact_robust_selection_minmax
+                                                                (costs, n, p, k, debug=DEBUG))
                     obj_val_exact = obj_val_exact_minmax
-                    x_vector_exact = [1 if val > 0.5 else 0 for val in x_val_exact_minmax]  # Rundungsabweichung bei
-                    # binären Variablen abfangen
-                    print(f"Selected items (exact): {x_vector_exact}")
-                    print(f"Objective value: {obj_val_exact:.2f}")
+                    x_vector_exact = [1 if val > 0.5 else 0 for val in x_val_exact_minmax]  # For rounding discrepancy
+                    dprint(f"Selected items (exact): {x_vector_exact}")
+                    dprint(f"Objective value: {obj_val_exact:.2f}")
                 elif criterion == "maxmin":
-                    print("\n--- Exact robust solution Max-Min ---")
-                    obj_val_exact_maxmin, x_val_exact_maxmin = solve_exact_robust_selection_maxmin(costs, n, p, k)
+                    print("\n--- Exact robust solution max-min ---")
+                    obj_val_exact_maxmin, x_val_exact_maxmin = (solve_exact_robust_selection_maxmin
+                                                                (costs, n, p, k, debug=DEBUG))
                     obj_val_exact = obj_val_exact_maxmin
                     x_vector_exact = [1 if val > 0.5 else 0 for val in x_val_exact_maxmin]
+                    dprint(f"Selected items (exact): {x_vector_exact}")
+                    dprint(f"Objective value: {obj_val_exact:.2f}")
 
-                result = solve_function(costs, n, p, k)
+                result = solve_function(costs, n, p, k, debug=DEBUG)
 
                 if algorithm == "primal_minmax":
-                    print("\n--- Primal Rounding Min-Max ---")
+                    print("\n--- Primal Rounding min-max ---")
                     obj_val_primal, x_val_primal_frac, x_vector_primal_rounded, obj_val_primal_lp, tau = result
                     x_vector_primal_frac = [round(val, 2) for val in x_val_primal_frac]
                     fractional_count = sum(1 for val in x_val_primal_frac if 0.0001 < val < 0.9999)
-                    fractional_ratio = fractional_count / n  # TODO: Evtl. rausnehmen
-                    print(f"Fractional values: {x_vector_primal_frac}")
-                    print(f"Fractional variables: {fractional_count} out of {n} ({fractional_ratio:.2%})")
-                    print(f"Selected items (rounded): {x_vector_primal_rounded}")
-                    print(f"Objective value: {obj_val_primal:.2f}")
+                    fractional_ratio = fractional_count / n
+                    dprint(f"Fractional values: {x_vector_primal_frac}")
+                    dprint(f"Fractional variables: {fractional_count} out of {n} ({fractional_ratio:.2%})")
+                    dprint(f"Selected items (rounded): {x_vector_primal_rounded}")
+                    dprint(f"Objective value: {obj_val_primal:.2f}")
 
-                    # Ratio of primal to exact objective value
-                    ratio_primal_opt = obj_val_primal / obj_val_exact if obj_val_exact != 0 else 0
-                    # Integrality gap and rounding gap calculations
-                    integrality_gap_primal = obj_val_exact / obj_val_primal_lp if obj_val_primal_lp != 0 else 0
-                    rounding_gap_primal = obj_val_primal / obj_val_primal_lp if obj_val_primal_lp != 0 else 0
-                    # Approximation guarantee
+                    # Metrics calculations
+                    ratio_primal_opt = obj_val_primal / obj_val_exact if obj_val_exact != 0 else math.nan
+                    integrality_gap = obj_val_exact / obj_val_primal_lp if obj_val_primal_lp != 0 else math.nan
                     approximation_guarantee = min(k, n - p + 1)
-                    a_posteriori_bound = 1 / tau if tau > 0 else float('inf')
-                    opt_lp_div_alg = obj_val_primal / obj_val_primal_lp if obj_val_primal != 0 else float('inf')
-                    print(f"Approximation ratio: {ratio_primal_opt:.2f}")
-                    print(f"Integrality gap: {integrality_gap_primal:.2f}")
-                    print(f"Rounding gap (rounded / LP): {rounding_gap_primal:.2f}")
-                    print(f"Approximation guarantee: min(k, n - p + 1) = {approximation_guarantee}")
-                    print(f"A-posteriori bound: ALG ≤ (1/τ) · OPT → 1/τ = {a_posteriori_bound:.2f}")
+                    a_posteriori_bound = 1 / tau if tau != 0 else math.nan
+                    alg_div_opt_lp = obj_val_primal / obj_val_primal_lp if obj_val_primal_lp != 0 else math.nan
+                    dprint(f"Approximation ratio: {ratio_primal_opt:.2f}")
+                    dprint(f"Integrality gap: {integrality_gap:.2f}")
+                    dprint(f"Approximation guarantee: min(k, n - p + 1) = {approximation_guarantee}")
+                    dprint(f"A-posteriori bound: ALG ≤ (1/τ) · OPT → 1/τ = {a_posteriori_bound:.2f}")
 
                     # Store results
                     all_results.append({
                         "algorithm": algorithm,
+                        "criterion": criterion,
                         "varying_param": a,
+                        "p_label": p_label,
                         "n": n,
                         "p": p,
                         "k": k,
@@ -164,13 +222,11 @@ if __name__ == "__main__":
                         "obj_exact": obj_val_exact,
                         "obj_primal_lp": obj_val_primal_lp,
                         "obj_primal": obj_val_primal,
-                        "ratio_primal_opt": ratio_primal_opt,
+                        "ratio_alg_opt": ratio_primal_opt,
                         "tau": tau,
                         "a_posteriori_bound": a_posteriori_bound,
-                        "opt_lp_div_alg": opt_lp_div_alg,
+                        "alg_div_opt_lp": alg_div_opt_lp,
                         "approximation_guarantee": approximation_guarantee,
-                        "integrality_gap": integrality_gap_primal,
-                        "rounding_gap": rounding_gap_primal,
                         "fractional_count": fractional_count,
                         "fractional_ratio": fractional_ratio,
                         "x_vector_exact": x_vector_exact,
@@ -180,29 +236,26 @@ if __name__ == "__main__":
                     })
 
                 elif algorithm == "primal_maxmin":
-                    print("\n--- Primal Rounding Max-Min ---")
-                    (obj_val_primal, x_vector_primal_rounded, obj_val_primal_lp, x_val_primal_frac, sorted_x_vals) = result
-                    print(f"Fractional values: {x_val_primal_frac}")
-                    print(f"Selected items (rounded): {x_vector_primal_rounded}")
-                    print(f"Objective value: {obj_val_primal:.2f}")
-                    print(f"LP objective (upper bound): {obj_val_primal_lp:.2f}")
+                    print("\n--- Primal Rounding max-min ---")
+                    (obj_val_primal, x_vector_primal_rounded, obj_val_primal_lp, x_val_primal_frac) = (
+                        result)
+                    dprint(f"Fractional values: {x_val_primal_frac}")
+                    dprint(f"Selected items (rounded): {x_vector_primal_rounded}")
+                    dprint(f"Objective value: {obj_val_primal:.2f}")
+                    dprint(f"LP objective (upper bound): {obj_val_primal_lp:.2f}")
 
-                    # Ratio of primal to exact objective value
-                    ratio_primal_opt = obj_val_primal / obj_val_exact if obj_val_exact != 0 else 0
-                    integrality_gap_primal = obj_val_exact / obj_val_primal_lp if obj_val_primal_lp != 0 else 0
-                    rounding_gap_primal = obj_val_primal / obj_val_primal_lp if obj_val_primal_lp != 0 else 0
-                    print(f"Approximation ratio: {ratio_primal_opt:.2f}")
-                    print(f"Integrality gap: {integrality_gap_primal:.2f}")
-                    print(f"Rounding gap (rounded / LP): {rounding_gap_primal:.2f}")
-                    # Approximation guarantee
-                    r = math.ceil(len(sorted_x_vals) / p)
-                    approximation_guarantee = 1 / r
-                    print(f"Approximation guarantee: {approximation_guarantee:.3f} (r = {r:.2f})")
+                    # Metrics calculations
+                    ratio_primal_opt = obj_val_primal / obj_val_exact if obj_val_exact != 0 else math.nan
+                    integrality_gap = obj_val_primal_lp / obj_val_exact if obj_val_exact != 0 else math.nan
+                    dprint(f"Approximation ratio: {ratio_primal_opt:.2f}")
+                    dprint(f"Integrality gap: {integrality_gap:.2f}")
 
                     # Store results
                     all_results.append({
                         "algorithm": algorithm,
+                        "criterion": criterion,
                         "varying_param": a,
+                        "p_label": p_label,
                         "n": n,
                         "p": p,
                         "k": k,
@@ -210,12 +263,47 @@ if __name__ == "__main__":
                         "obj_exact": obj_val_exact,
                         "obj_primal_lp": obj_val_primal_lp,
                         "obj_primal": obj_val_primal,
-                        "ratio_primal_opt": ratio_primal_opt,
-                        "integrality_gap": integrality_gap_primal,
-                        "rounding_gap": rounding_gap_primal,
+                        "ratio_alg_opt": ratio_primal_opt,
                         "x_vector_exact": x_vector_exact,
                         "x_vector_primal_frac": x_val_primal_frac,
                         "x_vector_primal_rounded": x_vector_primal_rounded,
+                        "flat_costs": flat_costs,
+                    })
+
+                elif algorithm == "primal_dual_minmax":
+                    print("\n--- Primal-Dual Rounding min-max ---")
+                    obj_val_primaldual, x_vector_primaldual_rounded, obj_dual, obj_val_primal_lp = result
+                    dprint(f"Selected items (rounded): {x_vector_primaldual_rounded}")
+                    dprint(f"Objective value: {obj_val_primaldual:.2f}")
+
+                    # Metrics calculations
+                    ratio_primaldual_opt = obj_val_primaldual / obj_val_exact if obj_val_exact != 0 else math.nan
+                    dprint(f"Approximation ratio: {ratio_primaldual_opt:.2f}")
+                    approximation_guarantee = k
+                    a_posteriori_bound = (obj_val_primaldual / obj_dual) if obj_dual != 0 else math.nan
+                    alg_div_opt_lp = obj_val_primaldual / obj_val_primal_lp if obj_val_primal_lp != 0 else math.nan
+                    dprint(f"a-posteriori (ALG/LB_dual): {a_posteriori_bound:.2f}")
+                    dprint(f"a-posteriori (ALG/OPT_LP): {alg_div_opt_lp:.2f}")
+
+                    # Store results
+                    all_results.append({
+                        "algorithm": algorithm,
+                        "criterion": criterion,
+                        "varying_param": a,
+                        "p_label": p_label,
+                        "n": n,
+                        "p": p,
+                        "k": k,
+                        "run": run + 1,
+                        "obj_exact": obj_val_exact,
+                        "obj_dual": obj_dual,
+                        "obj_val_primaldual": obj_val_primaldual,
+                        "a_posteriori_bound": a_posteriori_bound,
+                        "alg_div_opt_lp": alg_div_opt_lp,
+                        "approximation_guarantee": approximation_guarantee,
+                        "ratio_alg_opt": ratio_primaldual_opt,
+                        "x_vector_exact": x_vector_exact,
+                        "x_vector_primaldual_rounded": x_vector_primaldual_rounded,
                         "flat_costs": flat_costs,
                     })
 
@@ -224,21 +312,63 @@ if __name__ == "__main__":
             pickle.dump(all_results, f)
         print(f"Results for {algorithm} saved in {algo_result_dir} ")
 
-        # View all results from a .pkl file like a CSV TODO: Löschen, wenn nicht mehr benötigt (auch in utils.py)
-        print_all_results_from_pkl(os.path.join(algo_result_dir, f"all_results_{criterion.lower()}.pkl"))
+        # View all results from a .pkl file
+        dprint_all_results_from_pkl(os.path.join(algo_result_dir, f"all_results_{criterion.lower()}.pkl"), debug=DEBUG)
 
-        # Optional: Plot results
+        # Plot results
         if PLOT:
-            from plot import (plot_primal_rounding_only, plot_approximation_ratios_primal, plot_integrality_gap_primal,
-                              plot_rounding_gap_primal, plot_fractional_variable_count)
+            from plot import (plot_approx_ratio_only, plot_approximation_ratios_primal,
+                              plot_approximation_ratios_primaldual, plot_fractional_variable_count)
 
             if algorithm == "primal_minmax":
-                plot_primal_rounding_only(all_results, num_runs, var_param, output_dir=algo_result_dir)
-                plot_approximation_ratios_primal(all_results, num_runs, k, output_dir=algo_result_dir)
-                plot_integrality_gap_primal(all_results, num_runs, k, output_dir=algo_result_dir)
-                plot_rounding_gap_primal(all_results, num_runs, k, output_dir=algo_result_dir)
-                plot_fractional_variable_count(all_results, num_runs, k, output_dir=algo_result_dir)
+                plot_approx_ratio_only(
+                    all_results, num_runs, var_param,
+                    fixed_n=n, fixed_k=k, c_range=c_range,
+                    output_dir=algo_result_dir
+                )
+                plot_approximation_ratios_primal(
+                    all_results, num_runs, var_param,
+                    fixed_n=n, fixed_k=k, c_range=c_range,
+                    output_dir=algo_result_dir
+                )
+                plot_fractional_variable_count(
+                    all_results, num_runs, var_param,
+                    fixed_n=fixed_n if var_param != "n" else None,
+                    fixed_k=fixed_k if var_param != "k" else None,
+                    c_range=c_range,
+                    output_dir=algo_result_dir
+                )
 
             elif algorithm == "primal_maxmin":
-                # hier Code für MAX-MIN hinzufügen
-                pass
+                plot_approx_ratio_only(
+                    all_results, num_runs, var_param,
+                    fixed_n=n, fixed_k=k, c_range=c_range,
+                    output_dir=algo_result_dir
+                )
+
+            elif algorithm == "primal_dual_minmax":
+                plot_approx_ratio_only(
+                    all_results, num_runs, var_param,
+                    fixed_n=n, fixed_k=k, c_range=c_range,
+                    output_dir=algo_result_dir
+                )
+                plot_approximation_ratios_primaldual(
+                    all_results, num_runs, var_param,
+                    fixed_n=n, fixed_k=k, c_range=c_range,
+                    output_dir=algo_result_dir
+                )
+
+        results_by_alg[algorithm] = all_results
+
+    if PLOT and {'primal_minmax', 'primal_dual_minmax'}.issubset(results_by_alg):
+        from plot import plot_ratio_comp
+
+        plot_ratio_comp(
+            results_by_alg['primal_minmax'],
+            results_by_alg['primal_dual_minmax'],
+            num_runs, var_param,
+            fixed_n=fixed_n if var_param != 'n' else None,
+            fixed_k=fixed_k if var_param != 'k' else None,
+            c_range=c_range,
+            output_dir=RESULT_DIR
+        )
