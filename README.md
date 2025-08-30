@@ -14,8 +14,8 @@ robustness, we consider two criteria: min-max and max-min.
 
 This problem is NP-hard, and approximation algorithms are studied as efficient alternatives to exact optimization.
 
-Note that the max-min criterion with discrete uncertainty is inapproximable, so we focus on heuristic approaches for 
-this case.
+Note that the robust selection problem under the max-min criterion with discrete uncertainty is inapproximable, 
+so we focus on heuristic approaches for this case.
 
 ## Features
 
