@@ -1,14 +1,14 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-*.pkl
 *.png
 
 # Virtual environment
 .venv/
 
 # Output files
-results/
+results/*
+!results/.gitignore
 
 # IDE config
 .idea/
