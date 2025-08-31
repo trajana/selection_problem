@@ -36,7 +36,7 @@ elif var_param == "p":
 num_runs = 100
 c_range = 100
 
-OUTPUT_DIR = "repro_costs/p_var"
+OUTPUT_DIR = f"repro_costs/{var_param}_var"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 for a in var_values:

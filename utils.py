@@ -30,7 +30,7 @@ def get_fixed_costs(n=None, k=None):
 
 # Random costs
 def get_random_costs(n, k, c_range=100):
-    return [[random.randint(0, c_range) for _ in range(n)] for _ in range(k)]
+    return [[random.randint(1, c_range) for _ in range(n)] for _ in range(k)]
 
 
 # Print costs in a readable format

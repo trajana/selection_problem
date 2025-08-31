@@ -56,10 +56,10 @@ def safe_mean(values):
 
 def safe_ci95(values):
     vals = _finite(values)
-    n = vals.size
-    if n < 2:
+    sample_size = vals.size
+    if sample_size < 2:
         return 0.0
-    return 1.98 * float(np.std(vals, ddof=1)) / math.sqrt(n)
+    return 1.98 * float(np.std(vals, ddof=1)) / math.sqrt(sample_size)
 
 
 def plot_approx_ratio_only(all_results, num_runs, var_param, fixed_n=None, fixed_k=None, c_range=None,
@@ -108,7 +108,7 @@ def plot_approx_ratio_only(all_results, num_runs, var_param, fixed_n=None, fixed
             + (r"$n$=" + str(fixed_n) + ", " if var_param != "n" and fixed_n is not None else "")
             + (r"$p$=" + p_label + ", " if var_param != "p" and p_label else "")
             + (r"$k$=" + str(fixed_k) + ", " if var_param != "k" and fixed_k is not None else "")
-            + r"cost range: [0, " + str(c_range) + "])"
+            + r"cost range: [1, " + str(c_range) + "])"
     )
     # plt.title(f"{main_title}\n{subtitle}")
     plt.title(subtitle)
@@ -179,7 +179,7 @@ def plot_approximation_ratios_primal(all_results, num_runs, var_param, fixed_n=N
             + (r"$n$=" + str(fixed_n) + ", " if var_param != "n" and fixed_n is not None else "")
             + (r"$p$=" + p_label + ", " if var_param != "p" and p_label else "")
             + (r"$k$=" + str(fixed_k) + ", " if var_param != "k" and fixed_k is not None else "")
-            + r"cost range: [0, " + str(c_range) + "])"
+            + r"cost range: [1, " + str(c_range) + "])"
     )
     # plt.title(f"{main_title}\n{subtitle}")
     plt.title(subtitle)
@@ -253,7 +253,7 @@ def plot_approximation_ratios_primaldual(all_results, num_runs, var_param, fixed
             + (r"$n$=" + str(fixed_n) + ", " if var_param != "n" and fixed_n is not None else "")
             + (r"$p$=" + p_label + ", " if var_param != "p" and p_label else "")
             + (r"$k$=" + str(fixed_k) + ", " if var_param != "k" and fixed_k is not None else "")
-            + r"cost range: [0, " + str(c_range) + "])"
+            + r"cost range: [1, " + str(c_range) + "])"
     )
     # plt.title(f"{main_title}\n{subtitle}")
     plt.title(subtitle)
@@ -308,7 +308,7 @@ def plot_fractional_variable_count(all_results, num_runs, var_param, fixed_n=Non
             + (r"$n$=" + str(fixed_n) + ", " if var_param != "n" and fixed_n is not None else "")
             + (r"$p$=" + p_label + ", " if var_param != "p" else "")
             + (r"$k$=" + str(fixed_k) if var_param != "k" and fixed_k is not None else "")
-            + (", cost range: [0, " + str(c_range) + "]" if c_range is not None else "")
+            + (", cost range: [1, " + str(c_range) + "]" if c_range is not None else "")
             + f", {num_runs} runs per ${var_param}$)"
     )
     # plt.title(f"{main_title}\n{subtitle}")
@@ -375,7 +375,7 @@ def plot_ratio_comp(results_primal, results_primaldual, num_runs, var_param, fix
             + (r"$n$=" + str(fixed_n) + ", " if var_param != "n" and fixed_n is not None else "")
             + (r"$p$=" + p_label + ", " if var_param != "p" and p_label != "" else "")
             + (r"$k$=" + str(fixed_k) + ", " if var_param != "k" and fixed_k is not None else "")
-            + r"cost range: [0, " + str(c_range) + "])"
+            + r"cost range: [1, " + str(c_range) + "])"
     )
     # plt.title(f"{main_title}\n{subtitle}")
     plt.title(subtitle)
