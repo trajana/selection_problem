@@ -91,7 +91,7 @@ The current implementation supports:
     for all other parameters. 
     The input data used in the thesis experiments is not stored directly in this repository to keep the code base 
     lightweight. If you want to reproduce the results with `COST_MODE="reproduce"`, please download the cost archive 
-    from the [latest Release](https://https://github.com/trajana/selection_problem/releases/tag/data-v1.0) and extract 
+    from the [latest Release](https://github.com/trajana/selection_problem/releases/tag/data-v1.0) and extract 
     it into the project root. Ensure the folder structure remains as shown above.
 
 2. **Run the script**:
