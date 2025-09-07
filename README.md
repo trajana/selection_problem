@@ -81,13 +81,18 @@ The current implementation supports:
     | `var_param`  | Choose which variable should vary                                                                          | `"n"` = number of items, `"k"` = number of scenarios, `"p"` = number of items to select                   | line 52    | `"n"`           |
     | `var_values` | List of values for the chosen `var_param`                                                                  | Example: `[2,4,6,…,70]` for `n`; `[1,2,5,…,100]` for `k`; `[2,4,…,68]` for `p`                        | lines 54–65 | `[2,4,...,70]` (if `n`); `[1,2,5,…,100]` (if `k`); `[2,4,…,68]` (if `p`) |
     | `num_runs`   | Number of repetitions per setting                                                                          | Integer (e.g. `100`)                                                                                      | line 66    | `100`           |
-    | `COST_MODE`  | Toggle between fixed, random, or reproduced costs                                                          | `"fixed"` = use `utils.py` <br> `"random"` = generate random costs <br> `"reproduce"` = load from `repro_costs/{n_var\|k_var\|p_var}/` | line 67    | `"reproduce"`   |
+    | `COST_MODE`  | Toggle between fixed, random, or reproduced costs                                                          | `"fixed"` = use `utils.py` <br> `"random"` = generate random costs <br> `"reproduce"` = load from `repro_costs/{n_var\|k_var\|p_var}/` | line 67    | `"random"`   |
     | `c_range`    | Range for random costs                                                                                     | Integer (e.g. `100`)                                                                                      | line 68    | `100`           |
     | `PLOT`       | Enable/disable automatic plot generation                                                                   | `True` / `False`                                                                                          | line 69    | `True`          |
     | `DEBUG`      | Enable/disable detailed debug prints (not recommended for large instances due to excessive console output) | `True` / `False`                                                                                          | line 70    | `False`          |
 
-    Note: If you want to replicate the experiments from the thesis, you need to run the code three times, once for each 
-    varying parameter (`n`, `k`, and `p`), using the pre-specified default values for all other parameters.
+    Note: If you want to replicate the experiments from the thesis, you need to set `COST_MODE="reproduce"` and run 
+    the code three times, once for each varying parameter (`n`, `k`, and `p`), using the pre-specified default values 
+    for all other parameters. 
+    The input data used in the thesis experiments is not stored directly in this repository to keep the code base 
+    lightweight. If you want to reproduce the results with `COST_MODE="reproduce"`, please download the cost archive 
+    from the [latest Release](https://github.com/<USERNAME>/<REPO>/releases/tag/data-v1.0) and extract it into the 
+    project root. Ensure the folder structure remains as shown above.
 
 2. **Run the script**:
    ```bash

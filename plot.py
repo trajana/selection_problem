@@ -20,10 +20,10 @@ matplotlib.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",
     "font.serif": ["Computer Modern"],
-    "axes.labelsize": 16,
+    "axes.labelsize": 17,
     "figure.titlesize": 16,
-    "font.size": 14,
-    "legend.fontsize": 12,
+    "font.size": 17,
+    "legend.fontsize": 14,
     "xtick.labelsize": 12,
     "ytick.labelsize": 12,
     "grid.linestyle": ":",
@@ -74,7 +74,8 @@ def plot_approx_ratio_only(all_results, num_runs, var_param, fixed_n=None, fixed
     param_suffix = f"_{var_param}" if var_param in {"n", "k", "p"} else ""
     alg_key = all_results[0].get("algorithm", "") if all_results else ""
     is_primal_dual = "primal_dual" in alg_key
-    method_label = "Primal–Dual Rounding" if "primal_dual" in alg_key else "Primal Rounding"
+    base_label = "Primal–dual rounding" if "primal_dual" in alg_key else "Primal rounding"
+    method_label = rf"{base_label} $\mathrm{{ALG}} / \mathrm{{OPT}}_\mathrm{{IP}}$"
     output_plot = f"{output_dir}/plot_approx_ratio_only_{criterion}{param_suffix}.png"
     color_line = COL["primal_dual"] if is_primal_dual else COL["primal"]
 
@@ -99,7 +100,7 @@ def plot_approx_ratio_only(all_results, num_runs, var_param, fixed_n=None, fixed
         "p": r"Number of items to select $p$"
     }
     plt.xlabel(xlabel_map.get(var_param, ""))
-    plt.ylabel(r"Approximation ratio $\mathrm{ALG} / \mathrm{OPT}_{\mathrm{IP}}$")
+    plt.ylabel(r"Approximation ratio")
     # titles = {"minmax": "min-max", "maxmin": "max-min"}
     # main_title = f"Primal Rounding Approximation Ratio {titles[criterion]} criterion"
     p_label = all_results[0]["p_label"] if all_results and "p_label" in all_results[0] else ""
@@ -155,11 +156,12 @@ def plot_approximation_ratios_primal(all_results, num_runs, var_param, fixed_n=N
     # Plot
     plt.figure()
     plt.errorbar(param_values, avg_ratios, yerr=ci_ratios_95, fmt='-o', capsize=5,
-                 label=r"Primal Rounding (Ø $\pm$ 95\% CI)", color=COL["primal"])
+                 label=r"Primal rounding $\mathrm{ALG} / \mathrm{OPT}_{\mathrm{IP}}$ (Ø $\pm$ 95\% CI)",
+                 color=COL["primal"])
     plt.errorbar(param_values, avg_bounds, yerr=ci_bounds_95, fmt='--s', capsize=5,
-                 label=r"A-posteriori bound $1/\tau$ (Ø $\pm$ 95\% CI)", color=COL["aposteriori_tau"])
+                 label=r"A posteriori bound $1/\tau$ (Ø $\pm$ 95\% CI)", color=COL["aposteriori_tau"])
     plt.errorbar(param_values, avg_alg_div_optlp, yerr=ci_alg_div_optlp_95, fmt='-.d', capsize=5,
-                 label=r"A-posteriori bound $\mathrm{ALG} / \mathrm{OPT}_{\mathrm{LP}}$ (Ø $\pm$ 95\% CI)",
+                 label=r"A posteriori bound $\mathrm{ALG} / \mathrm{OPT}_{\mathrm{LP}}$ (Ø $\pm$ 95\% CI)",
                  color=COL["aposteriori_lplb"])
     plt.plot(param_values, avg_guarantees, ':^', label=r"Approximation guarantee $\min(k, n - p + 1)$",
              color=COL["apriori"])
@@ -169,7 +171,7 @@ def plot_approximation_ratios_primal(all_results, num_runs, var_param, fixed_n=N
         "p": r"Number of items to select $p$"
     }
     plt.xlabel(xlabel_map.get(var_param, ""))
-    plt.ylabel(r"Relative performance ratio")
+    plt.ylabel("Approximation ratio and bounds")
     plt.yscale('log')
     # titles = {"minmax": "min-max"}
     # main_title = f"Approximation Ratio vs. Approximation Guarantees for {titles[criterion]} criterion"
@@ -227,14 +229,15 @@ def plot_approximation_ratios_primaldual(all_results, num_runs, var_param, fixed
     # Plot
     plt.figure()
     plt.errorbar(param_values, avg_ratios, yerr=ci_ratios_95, fmt='-o', capsize=5,
-                 label=r"Primal-Dual Rounding (Ø $\pm$ 95\% CI)", color=COL["primal_dual"])
+                 label=r"Primal-dual rounding $\mathrm{ALG} / \mathrm{OPT}_{\mathrm{IP}}$ (Ø $\pm$ 95\% CI)",
+                 color=COL["primal_dual"])
     plt.plot(param_values, avg_guarantees, ':^',
-             label=r"Theoretical guarantee $k$", color=COL["apriori"])
+             label=r"Approximation guarantee $k$", color=COL["apriori"])
     plt.errorbar(param_values, avg_a_post, yerr=ci_bounds_95, fmt='--s', capsize=5,
-                 label=r"A–posteriori bound $\mathrm{ALG} / \mathrm{LB}_{\mathrm{dual}}$ (Ø $\pm$ 95\% CI)",
+                 label=r"A posteriori bound $\mathrm{ALG} / \mathrm{LB}_{\mathrm{dual}}$ (Ø $\pm$ 95\% CI)",
                  color=COL["aposteriori_tau"])
     plt.errorbar(param_values, avg_alg_div_opt_lp, yerr=ci_alg_div_optlp_95, fmt='--s', capsize=5,
-                 label=r"A–posteriori bound $\mathrm{ALG} / \mathrm{OPT}_{\mathrm{LP}}$ (Ø $\pm$ 95\% CI)",
+                 label=r"A posteriori bound $\mathrm{ALG} / \mathrm{OPT}_{\mathrm{LP}}$ (Ø $\pm$ 95\% CI)",
                  color=COL["aposteriori_lplb"])
 
     xlabel_map = {
@@ -243,7 +246,7 @@ def plot_approximation_ratios_primaldual(all_results, num_runs, var_param, fixed
         "p": r"Number of items to select $p$"
     }
     plt.xlabel(xlabel_map.get(var_param, ""))
-    plt.ylabel(r"Approximation ratio $\mathrm{ALG} / \mathrm{OPT}_{\mathrm{IP}}$")
+    plt.ylabel("Approximation ratio and bounds")
     plt.yscale('log')
     # titles = {"minmax": "min-max"}
     # main_title = f"Approximation Ratio vs. Approximation Guarantees for {titles[criterion]} criterion"
@@ -354,11 +357,13 @@ def plot_ratio_comp(results_primal, results_primaldual, num_runs, var_param, fix
 
     # Primal Rounding
     plt.errorbar(common_params, avg_pri, yerr=err_pri, fmt='-o', capsize=5,
-                 label=r"Primal Rounding (Ø $\pm$ 95\% CI)", color=COL["primal"])
+                 label=r"Primal rounding $\mathrm{ALG} / \mathrm{OPT}_{\mathrm{IP}}$ (Ø $\pm$ 95\% CI)",
+                 color=COL["primal"])
 
     # Primal–Dual Rounding
     plt.errorbar(common_params, avg_pd, yerr=err_pd, fmt='-s', capsize=5,
-                 label=r"Primal–Dual Rounding (Ø $\pm$ 95\% CI)", color=COL["primal_dual"])
+                 label=r"Primal–dual rounding $\mathrm{ALG} / \mathrm{OPT}_{\mathrm{IP}}$ (Ø $\pm$ 95\% CI)",
+                 color=COL["primal_dual"])
 
     xlabel_map = {
         "n": r"Number of items $n$",
@@ -366,7 +371,7 @@ def plot_ratio_comp(results_primal, results_primaldual, num_runs, var_param, fix
         "p": r"Number of items to select $p$"
     }
     plt.xlabel(xlabel_map.get(var_param, ""))
-    plt.ylabel(r"Approximation ratio $\mathrm{ALG} / \mathrm{OPT}_{\mathrm{IP}}$")
+    plt.ylabel("Approximation ratio")
     # titles = {"minmax": "min-max"}
     # main_title = f"Approximation Ratio Primal vs. Primal–Dual Rounding under the {titles[criterion]} criterion"
     p_label = results_primal[0].get("p_label", "") if results_primal else ""

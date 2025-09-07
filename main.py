@@ -47,9 +47,9 @@ p: int | None = None
 k: int | None = None
 
 # Base data
-ALGORITHMS = ["primal_dual_minmax", "primal_minmax", "primal_maxmin"]  # Choose algorithms that should be run.
+ALGORITHMS = ["primal_minmax", "primal_maxmin", "primal_dual_minmax"]  # Choose algorithms that should be run.
 # Available: "primal_minmax", "primal_maxmin", "primal_dual_minmax"
-var_param = "p"  # x-axis for the plot, can be "n" or "k" or "p"
+var_param = "n"  # x-axis for the plot, can be "n" or "k" or "p"
 if var_param == "n":
     var_values = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52,
                   54, 56, 58, 60, 62, 64, 66, 68, 70]
@@ -64,7 +64,7 @@ elif var_param == "p":
     fixed_k = 5
     var_values = list(range(2, fixed_n, 2))  # p in steps of 2 from 2 to n-2
 num_runs = 100  # Number of runs for the loop
-COST_MODE = "reproduce"    # Options: "random", "fixed", "reproduce"
+COST_MODE = "random"    # Options: "random", "fixed", "reproduce"
 c_range = 100  # Range for random costs [0, c_range]
 PLOT = True  # Set True to enable plotting
 DEBUG = False  # Set True to enable debug prints
